@@ -177,7 +177,7 @@ end submenu_Dev
 -
 on _CreateMenuPage hKey
    put _Stackname (hKey) into stackName
-   put help_MenuPageTitle (stackName) into gMenuTitle
+   put help_ConstructMenuPageTitle (stackName) into gMenuTitle
    --
    help_CreateMenu gMenuTitle
    --
@@ -186,7 +186,7 @@ end _CreateMenuPage
 
 on _UpdateMenuPage hKey
    put _Stackname (hKey) into stackName
-   put help_MenuPageTitle (stackName) into gMenuTitle
+   put help_ConstructMenuPageTitle (stackName) into gMenuTitle
    --
    help_UpdateMenu gMenuTitle, "reference"
    --

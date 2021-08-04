@@ -56,6 +56,24 @@ function help_ConstructURL stackName, scriptType, pCheckURL
    return someURL
 end help_ConstructURL
 
+function help_ConstructTitle stackName, scriptType
+   switch
+      case scriptType = "transport"
+         return help_ConstructTransportTitle (stackName)
+      case scriptType is "controller"
+      case scriptType is "menu"
+         return help_ConstructMenuPageTitle (stackName)
+      default
+         return stackName
+   end switch
+end help_ConstructTitle
+
+function help_ConstructTransportTitle stackName
+   set the itemdelimiter to "."
+   put text_InitialCaps (item 1 of stackName) && "Transport" after pageTitle
+   return pageTitle
+end help_ConstructTransportTitle
+
 
 --> Help | github_handlerURL
 -
@@ -131,7 +149,7 @@ command lcw_CreateObjectHelp sObject
    switch scriptType
       case "controller"
       case "menu"
-         put help_MenuPageTitle (stackName) into gMenuTitle
+         put help_ConstructMenuPageTitle (stackName) into gMenuTitle
          help_CreateMenu gMenuTitle
          break
       case "transport"
@@ -231,25 +249,6 @@ end lcw_UpdateHandlerHelp
 
 --> Help | Construct
 -
-function help_ConstructTitle stackName, scriptType
-   switch
-      case scriptType = "transport"
-         return help_ConstructTransportTitle (stackName)
-      case scriptType is "controller"
-      case scriptType is "menu"
-         return help_ConstructMenuPageTitle (stackName)
-      default
-         return stackName
-   end switch
-end help_ConstructTitle
-
-function help_ConstructTransportTitle stackName
-   set the itemdelimiter to "."
-   put text_InitialCaps (item 1 of stackName) && "Transport" after pageTitle
-   return pageTitle
-end help_ConstructTransportTitle
-
-
 function help_ObjectCurlyData sObject, scriptType
    local curlyData
    --   
@@ -347,7 +346,7 @@ private command _AddObjectCurlyData @curlyData, scriptType, sObject
       case "menu"
       case "controller"
          -- put the script_Metadata ["name"] of sObject into stackName
-         put help_MenuPageTitle (stackName) into menuTitle
+         put help_ConstructMenuPageTitle (stackName) into menuTitle
          put the menu_Handlers [menuTitle] of sObject into mHandlers
          put mHandlers into curlyData ["all"]["Menu Handler Index"]
          --

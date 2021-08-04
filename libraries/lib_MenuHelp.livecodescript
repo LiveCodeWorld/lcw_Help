@@ -24,6 +24,44 @@ function help_ConstructHkeyUrl hKey, pCheckURL
 end help_ConstructHkeyUrl
 
 
+--> Help | Menu | PageTitle
+-
+function help_ConstructMenuPageTitle gMenuTitle
+   -- replace "_" with " | " in stackName
+   put menu_StripGlobal (gMenuTitle) into pageTitle
+   return word 1 to -1 of pageTitle
+end help_ConstructMenuPageTitle
+
+
+--> Help | Menu | Info
+-
+function help_ConstructMenuSubDomain gMenuTitle
+   put menu_StripGlobal (gMenuTitle) into pageTitle
+   put help_MenuSubDomain (pageTitle) into menuSubDomain
+   return menuSubDomain
+end help_ConstructMenuSubDomain
+
+function help_MenuSubDomain pageTitle
+   set the itemdelimiter to "|"
+   put the number of items of pageTitle - 1 into maxNum
+   repeat with itemNum = maxNum down to 1
+      put word 1 to -1 of item itemNum of pageTitle into dBit
+      put tolower (dBit) & "." after firstBit
+   end repeat
+   put firstBit & "menu.livecode.world" into menuSubDomain
+   return menuSubDomain
+end help_MenuSubDomain
+
+function menu_StripGlobal gMenuTitle
+   set the itemdelimiter to "|"
+   if word 1 to -1 of item 1 of gMenuTitle = "Global" then
+      delete item 1 of gMenuTitle
+   end if
+   put word 1 to -1 of gMenuTitle into pageTitle 
+   return pageTitle
+end menu_StripGlobal
+
+
 --> Help | Launch
 -
 command launch_MenuItemHelp hKey
@@ -212,7 +250,7 @@ command help_CreateMenuSubdomain hKey
    end if
    
    -- fetch, rename and store menuPageArray
-   put menu_ConstructPageTitle (gMenuTitle) into menuPageTitle
+   put help_ConstructMenuPageTitle (gMenuTitle) into menuPageTitle
    put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
    put pageArray_Fetch ("menu.livecode.world", menuPageSlug) into menuPageArray
    if menuPageArray is empty then
@@ -328,59 +366,6 @@ function lcw_FetchMenuItemHelpArray hKey, pFetchWelcome
    end if
    return pageArray
 end lcw_FetchMenuItemHelpArray
-
-
---> Help | Menu | Info
--
-function help_ConstructMenuSubDomain gMenuTitle
-   put menu_StripGlobal (gMenuTitle) into pageTitle
-   put help_MenuSubDomain (pageTitle) into menuSubDomain
-   return menuSubDomain
-end help_ConstructMenuSubDomain
-
-function help_MenuSubDomain pageTitle
-   set the itemdelimiter to "|"
-   put the number of items of pageTitle - 1 into maxNum
-   repeat with itemNum = maxNum down to 1
-      put word 1 to -1 of item itemNum of pageTitle into dBit
-      put tolower (dBit) & "." after firstBit
-   end repeat
-   put firstBit & "menu.livecode.world" into menuSubDomain
-   return menuSubDomain
-end help_MenuSubDomain
-
-function menu_ConstructPageTitle gMenuTitle
-   -- see similar "help_ConstructMenuPageTitle"
-   set the itemdelimiter to "|"
-   if word 1 to -1 of item 1 of gMenuTitle = "Global" then
-      delete item 1 of gMenuTitle
-   end if
-   return word 1 to -1 of gMenuTitle
-end menu_ConstructPageTitle
-
-function help_ConstructMenuPageTitle stackName
-   -- remove first "Global" item for brevity of title
-   set the itemdelimiter to "_"
-   if item 1 of stackName = "Global" then
-      delete item 1 of stackName
-   end if
-   put help_MenuPageTitle (stackName) into pageTitle
-   return pageTitle
-end help_ConstructMenuPageTitle
-
-function help_MenuPageTitle stackName
-   replace "_" with " | " in stackName
-   return stackName
-end help_MenuPageTitle
-
-function menu_StripGlobal gMenuTitle
-   set the itemdelimiter to "|"
-   if word 1 to -1 of item 1 of gMenuTitle = "Global" then
-      delete item 1 of gMenuTitle
-   end if
-   put word 1 to -1 of gMenuTitle into pageTitle 
-   return pageTitle
-end menu_StripGlobal
 
 
 --> Help | Menu | Construct
