@@ -79,10 +79,10 @@ end _
 
 --> Dev | Menu
 -
-on menu_LaunchDomain sObject
+on _LaunchDomain sObject
    put the script_Type of sObject into scriptType
    put LocalArray ["helpURL"] & CR &  help_ConstructDomain (scriptType)
-end menu_LaunchDomain
+end _LaunchDomain
 
 on _LaunchGoogleDig
    launch url "https://toolbox.googleapps.com/apps/dig/#A/"

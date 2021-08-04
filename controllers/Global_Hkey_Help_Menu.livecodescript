@@ -106,6 +106,16 @@ on menu_MenuHandlerHelp hKey
    end if
 end menu_MenuHandlerHelp
 
+on menu_LaunchGithubUrl hKey
+   hkeyLine_Deconstruct hKey, hName, hType, sObject
+   --
+   put the github_HandlerURL [hKey] of sObject into githubURL
+   launch url githubURL
+   if the result is not empty then
+      put githubURL
+   end if
+end menu_LaunchGithubUrl
+
 on _
 end _
 
