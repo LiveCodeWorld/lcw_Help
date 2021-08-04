@@ -10,24 +10,118 @@ deps: lcw_Wiki
 /*
 lcw_Help uses the livecode.world federated wiki to store it's help.
 As such you need to initiate the lcw_Wiki rpject for these handelrs to work.
-
-This is a new library designed to use Fedwiki for writing notes and help about LCW project stacks.
-This is a first step in an experiment in literate coding in Livecode and wiki.
-
-== TO DO ==
-Work out what to do with handlers, There see to be too many of them
-
-private function _ConstructGithubPara hKey
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the github_HandlerURL [hKey] of hObject && "github" into githubLink
-   put "You can view the source here - [" & githubLink & "]" into githubPara
-   return githubPara
-end _ConstructGithubPara
 */
 
 
 --> Working on
 -
+getprop help_Url [pCheckURL]
+   put the long id of the target into tObject
+   put the stack_Name of tObject into stackName
+   put the script_Type of tObject into scriptType
+   put help_ConstructURL (stackName, scriptType, pCheckURL) into someURL
+   return someURL
+end help_Url
+
+function help_ConstructDomain scriptType
+   if scriptType = "controller" then
+      put "menu.livecode.world" into wikiDomain
+   else
+      put scriptType & ".livecode.world" into wikiDomain
+   end if
+   return wikiDomain
+end help_ConstructDomain
+
+function help_ConstructMenuUrl stackName, pCheckURL
+   put help_ConstructDomain ("menu") into wikiDomain
+   put help_ConstructMenuPageTitle (stackName) into menuPageTitle
+   put fedwiki_ConstructSlug (menuPageTitle) into pageSlug
+   
+   # Return emmpty if page does not exist
+   if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
+   
+   # Construct and return page utl
+   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
+   return someURL
+end help_ConstructMenuUrl
+
+function help_ConstructURL stackName, scriptType, pCheckURL
+   put help_ConstructDomain (scriptType) into wikiDomain
+   put help_ConstructTitle (stackName, scriptType) into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   --
+   if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
+   --
+   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
+   return someURL
+end help_ConstructURL
+
+
+--> Help | github_handlerURL
+-
+getprop script_MarkdownHandlerIndex
+   put the long id of the target into hObject
+   put the revAvailableHandlers of hObject into hTable
+   repeat for each line hTableLine in hTable
+      put word 1 of hTableLine into hType
+      if char 1 of hType = "P" then next repeat
+      
+      put word 2 of hTableLine into hName
+      put word 3 of hTableLine + 1 into sLineNum
+      put word 4 of hTableLine + 1 into eLineNum
+      
+      put github_handlerURL (hObject, sLineNum, eLineNum) into githubURL 
+      put "- [" & hName & "](" & githubURL & ")" & CR after markdownIndex
+   end repeat
+   delete char -1 of markdownIndex
+   return markdownIndex
+end script_MarkdownHandlerindex
+
+function help_HkeyCurlyData hKey, pUpdate
+   -- also used by handlers in "lib_Transport"
+   -- uses both "github_LaunchURL" and "github_RelativePath"
+   local curlyData
+   --
+   -- newer tider style
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the github_HandlerURL [hKey] of hObject into curlyData ["all"]["githubHandlerURL"]
+   put hkey_GetType (hKey) into curlyData ["all"]["handlerType"]
+   
+   -- older exerimental style
+   help_SetHkeyInfo hKey, wikiDomain, pageSlug, pageTitle
+   put storyArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
+   curly_SetReplaceArray curlyData, itemArray, "4ecda1442570d900"
+   --
+   _SetHkeyPageItemDictionary curlyData
+   --
+   put hkey_FetchHandler (hKey) into someHandler
+   help_IndentHandler someHandler
+   curly_SetData curlyData, "someHandler", someHandler
+   --
+   put hkey_GetDotText (hKey) into dotText
+   if dotText is not empty then
+      curly_SetData curlyData, "dotText", dotText
+   end if
+   --
+   --  
+   put _ConstructHandlerMetadata (hKey) into handlerMetadata
+   curly_SetData curlyData, "handlerMetadata", handlerMetadata
+   --
+   put _ConstructHandlerSyntax (someHandler, hKey) into handlerSyntax
+   curly_SetData curlyData, "handlerSyntax", handlerSyntax
+   --
+   put _ConstructCallList (someHandler, hKey) into callList
+   curly_SetData curlyData, "callList", callList
+   --
+   put _ConstructParamList (someHandler) into paramList
+   curly_SetData curlyData, "paramList", paramList
+   --
+   put _ConstructHandlerTags (hKey, pUpdate) into handlerTags -- also look inside handler
+   curly_SetData curlyData, "handlerTags", handlerTags
+   --
+   return curlyData
+end help_HkeyCurlyData
+
 
 --> LCW | Help
 -
@@ -62,7 +156,6 @@ command lcw_UpdateObjectHelp sObject
 end lcw_UpdateObjectHelp
 
 command help_Create pageTitle, scriptType, curlyData, pScriptHelp
-   -- put "handler.livecode.world" into helpDomain
    put help_ConstructDomain (scriptType) into helpDomain
    --
    put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
@@ -73,43 +166,14 @@ command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    --
    pageArray_Store helpDomain, pageSlug, pageArray
-   --
-   put the result into shellResult -- error, fetching ip address for droplet AtopiaDropletName
-   if shellResult is empty then
-      return pageArray
-   else
+   put the result into shellResult
+   if item 1 of shellResult is "error" then
+      -- error, fetching ip address for droplet AtopiaDropletName
       return shellResult
+   else
+      return pageArray
    end if
 end help_Create
-
-
---> Props
--
-getprop help_Url [pCheckURL]
-   put the long id of the target into tObject
-   put the stack_Name of tObject into stackName
-   put the script_Type of tObject into scriptType
-   put help_ConstructURL (stackName, scriptType, pCheckURL) into someURL
-   return someURL
-end help_Url
-
-getprop script_MarkdownHandlerIndex
-   put the long id of the target into hObject
-   put the revAvailableHandlers of hObject into hTable
-   repeat for each line hTableLine in hTable
-      put word 1 of hTableLine into hType
-      if char 1 of hType = "P" then next repeat
-      
-      put word 2 of hTableLine into hName
-      put word 3 of hTableLine + 1 into sLineNum
-      put word 4 of hTableLine + 1 into eLineNum
-      
-      put github_handlerURL (hObject, sLineNum, eLineNum) into githubURL 
-      put "- [" & hName & "](" & githubURL & ")" & CR after markdownIndex
-   end repeat
-   delete char -1 of markdownIndex
-   return markdownIndex
-end script_MarkdownHandlerindex
 
 
 --> Help
@@ -167,21 +231,6 @@ end lcw_UpdateHandlerHelp
 
 --> Help | Construct
 -
-function help_ConstructURL stackName, scriptType, pCheckURL
-   put help_ConstructDomain (scriptType) into wikiDomain
-   put help_ConstructTitle (stackName, scriptType) into pageTitle
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   --
-   if pCheckURL is true then
-      put fedwiki_PageExists (wikiDomain, pageSlug) into isWiki
-      if isWiki is false then
-         return empty
-      end if
-   end if
-   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
-   return someURL
-end help_ConstructURL
-
 function help_ConstructTitle stackName, scriptType
    switch
       case scriptType = "transport"
@@ -259,18 +308,6 @@ command help_IndentHandler @someHandler
 end help_IndentHandler
 
 
---> Help | Construct
--
-function help_ConstructDomain scriptType
-   if scriptType = "controller" then
-      put "menu.livecode.world" into wikiDomain
-   else
-      put scriptType & ".livecode.world" into wikiDomain
-   end if
-   return wikiDomain
-end help_ConstructDomain
-
-
 --> Help | Template | Model
 -
 function help_FetchTemplateArray scriptType, pStripJournal
@@ -289,51 +326,6 @@ function help_FetchTemplateJson scriptType
    put pageJson_Fetch (fedwikiDomain, pageSlug) into pageJSON
    return pageJSON
 end help_FetchTemplateJson
-
-function help_HkeyCurlyData hKey, pUpdate
-   -- also used by handlers in "lib_Transport"
-   -- uses both "github_LaunchURL" and "github_RelativePath"
-   local curlyData
-   --
-   -- newer tider style
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the github_HandlerURL [hKey] of hObject into curlyData ["all"]["githubHandlerURL"]
-   put hkey_GetType (hKey) into curlyData ["all"]["handlerType"]
-   
-   -- older exerimental style
-   help_SetHkeyInfo hKey, wikiDomain, pageSlug, pageTitle
-   put storyArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
-   curly_SetReplaceArray curlyData, itemArray, "4ecda1442570d900"
-   --
-   _SetHkeyPageItemDictionary curlyData
-   --
-   put hkey_FetchHandler (hKey) into someHandler
-   help_IndentHandler someHandler
-   curly_SetData curlyData, "someHandler", someHandler
-   --
-   put hkey_GetDotText (hKey) into dotText
-   if dotText is not empty then
-      curly_SetData curlyData, "dotText", dotText
-   end if
-   --
-   --  
-   put _ConstructHandlerMetadata (hKey) into handlerMetadata
-   curly_SetData curlyData, "handlerMetadata", handlerMetadata
-   --
-   put _ConstructHandlerSyntax (someHandler, hKey) into handlerSyntax
-   curly_SetData curlyData, "handlerSyntax", handlerSyntax
-   --
-   put _ConstructCallList (someHandler, hKey) into callList
-   curly_SetData curlyData, "callList", callList
-   --
-   put _ConstructParamList (someHandler) into paramList
-   curly_SetData curlyData, "paramList", paramList
-   --
-   put _ConstructHandlerTags (hKey, pUpdate) into handlerTags -- also look inside handler
-   curly_SetData curlyData, "handlerTags", handlerTags
-   --
-   return curlyData
-end help_HkeyCurlyData
 
 
 --> Private
@@ -364,7 +356,6 @@ private command _AddObjectCurlyData @curlyData, scriptType, sObject
          --
          return pageTitle
       case "ide"         
-         -- put github_handlerURL (sObject) into curlyData ["all"]["github link"]
          put the script_MarkdownHandlerindex of sObject into curlyData ["all"]["Handler List"]
          put relFolder into curlyData ["all"]["rel folder"]
          put shortFile into curlyData ["all"]["short file"]

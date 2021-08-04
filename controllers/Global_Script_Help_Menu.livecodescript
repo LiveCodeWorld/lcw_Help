@@ -11,19 +11,18 @@ version: 0.2
 -
 local LocalArray
 
-on menu_Init
-   put env_ProjectIsActive ("lcw_Wiki") into helpActive
-   put helpActive into LocalArray ["helpActive"]
-   
-   if helpActive then
-      put scriptEditor_Object() into sObject
-      put the help_Url [true] of sObject into helpURL
-      put helpURL into LocalArray ["helpURL"]
-   end if
-end menu_Init
-
 getprop menu_Target [tObject]
    put scriptEditor_Object() into sObject
+   
+   put env_ProjectIsActive ("lcw_Wiki") into helpActive   
+   if helpActive then
+      put the help_Url [true] of sObject into helpURL
+      put helpURL into LocalArray ["helpURL"]
+      put scriptType into LocalArray ["scriptType"]
+   end if
+   
+   put helpActive into LocalArray ["helpActive"]
+   put tObject into LocalArray ["tObject"]
    return sObject
 end menu_Target
 
@@ -61,22 +60,30 @@ end disabled_CreateHelp
 --> Global | Script | Help | Menu
 -
 on menu_Help sObject
-   help_Launch sObject
+   launch_ObjectHelp sObject
 end menu_Help
 
 on menu_CreateHelp sObject
    lcw_CreateObjectHelp sObject
-   help_Launch sObject
+   launch_ObjectHelp sObject
 end menu_CreateHelp
 
 on menu_UpdateHelp sObject
    lcw_UpdateObjectHelp sObject
-   help_Launch sObject
+   launch_ObjectHelp sObject
 end menu_UpdateHelp
 
 on _
 end _
 
-on menu_LaunchGoogleDig
+
+--> Dev | Menu
+-
+on menu_LaunchDomain sObject
+   put the script_Type of sObject into scriptType
+   put LocalArray ["helpURL"] & CR &  help_ConstructDomain (scriptType)
+end menu_LaunchDomain
+
+on _LaunchGoogleDig
    launch url "https://toolbox.googleapps.com/apps/dig/#A/"
-end menu_LaunchGoogleDig
+end _LaunchGoogleDig

@@ -9,6 +9,58 @@ version: 0.1
 
 --> Working on
 -
+function help_ConstructHkeyUrl hKey, pCheckURL
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the stack_Name of hObject into stackName
+   --
+   put help_ConstructMenuPageTitle (stackName) into pageTitle
+   put help_MenuSubDomain (pageTitle) into menuSubDomain
+   --
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put fedwiki_ConstructUrlFromSlug (menuSubDomain, pageSlug) into helpURL
+   if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
+   --
+   return helpURL
+end help_ConstructHkeyUrl
+
+
+--> Help | Launch
+-
+command launch_MenuItemHelp hKey
+   put help_ConstructHkeyUrl (hKey, true) into helpURL
+   if helpURL is empty then return "Error, wiki-page does not exist for:" && hKey
+   --
+   launch url helpURL
+   return helpURL
+end launch_MenuItemHelp
+
+command launch_ObjectHelp tObject
+   put the help_Url of tObject into someURL
+   launch url someURL
+   return someURL
+end launch_ObjectHelp
+
+command help_LaunchMenu stackName
+   put help_ConstructMenuUrl (stackName, true) into someURL
+   if someURL is empty then return empty
+   launch url someURL
+   return someURL
+end help_LaunchMenu
+
+command help_LaunchMenuSubdomain stackName
+   put help_ConstructMenuPageTitle (stackName) into pageTitle
+   put help_MenuSubDomain (pageTitle) into menuSubDomain
+   --
+   put fedwiki_ConstructUrlFromSlug (menuSubDomain) into someURL
+   if someURL is empty then return empty
+   --
+   launch url someURL
+   return someURL
+end help_LaunchMenuSubdomain
+
+
+--> Help
+-
 command help_SetHkeyInfo hKey, @wikiDomain, @pageSlug, @pageTitle   
    switch
       case hkey_IsMenuHandler (hKey)
@@ -79,7 +131,14 @@ end _SetMenuItemHelpInfo
 command help_CheckUpdateMenuItem hKey
    _SetMenuItemHelpInfo hKey, gMenuTitle, hkeyPageTitle, menuSubDomain, hkeySlug
    
-   -- check menu.livecode.world
+   # Menu-page: - create or update
+   _CreateOrUpdate gMenuTitle
+   
+   # Menu-item: - create or update
+   _CreateOrUpdateMenuItem hKey, menuSubDomain
+end help_CheckUpdateMenuItem
+
+private command _CreateOrUpdate gMenuTitle
    if help_CheckMenu (gMenuTitle) is true then
       help_UpdateMenu gMenuTitle, "reference"
       if the result is empty then
@@ -88,10 +147,10 @@ command help_CheckUpdateMenuItem hKey
    else
       help_CreateMenu gMenuTitle
    end if
-   
-   -- check subdomain welcome-visitors
+end _CreateOrUpdate
+
+private command _CreateOrUpdateMenuItem hKey, menuSubDomain
    if fedwiki_WikiExists (menuSubDomain) is true then
-      -- if help_CheckMenuSubdomain (hKey) is true then
       help_UpdateMenuSubdomain hKey, "reference"
       if the result is empty then
          breakpoint -- should create
@@ -99,7 +158,7 @@ command help_CheckUpdateMenuItem hKey
    else
       help_CreateMenuSubdomain hKey
    end if
-end help_CheckUpdateMenuItem
+end _CreateOrUpdateMenuItem
 
 function help_CheckMenu gMenuTitle
    put help_FetchMenuHelpArray (gMenuTitle) into pageArray
@@ -244,65 +303,6 @@ function help_CreateMenuPageArray gMenuTitle, mController, pHow
    --
    return pageArray
 end help_CreateMenuPageArray
-
-
---> Help | Launch
--
-command help_Launch tObject
-   put the help_Url of tObject into someURL
-   launch url someURL
-   return someURL
-end help_Launch
-
-command help_LaunchMenu stackName
-   put help_ConstructMenuUrl (stackName, true) into someURL
-   if someURL is empty then return empty
-   launch url someURL
-   return someURL
-end help_LaunchMenu
-
-command help_LaunchMenuSubdomain stackName
-   put help_ConstructMenuPageTitle (stackName) into pageTitle
-   put help_MenuSubDomain (pageTitle) into menuSubDomain
-   put help_ConstructURL (menuSubDomain) into someURL
-   
-   if someURL is empty then return empty
-   launch url someURL
-   return someURL
-end help_LaunchMenuSubdomain
-
-command help_LaunchMenuItem hKey
-   put help_ConstructHkeyUrl (hKey, true) into someURL
-   if someURL is empty then return empty
-   launch url someURL
-   return someURL
-end help_LaunchMenuItem
-
-function help_ConstructMenuUrl stackName, pCheckURL
-   put help_ConstructDomain ("menu") into wikiDomain
-   put help_ConstructMenuPageTitle (stackName) into menuPageTitle
-   put fedwiki_ConstructSlug (menuPageTitle) into pageSlug
-   --
-   put help_ConstructURL (wikiDomain, pageSlug, pCheckURL) into someURL
-   return someURL
-end help_ConstructMenuUrl
-
-function help_ConstructHkeyUrl hKey, pCheckURL
-   help_SetHkeyInfo hKey, wikiDomain, pageSlug, pageTitle
-   --
-   put help_ConstructURL (wikiDomain, pageSlug, pCheckURL) into someURL
-   return someURL
-end help_ConstructHkeyUrl
-
-function help_ConstructURL wikiDomain, pSlug, pCheckURL
-   if pCheckURL is true then
-      put fedwiki_PageExists (wikiDomain, pSlug) into isWiki
-      if isWiki is false then return empty
-   end if
-   --
-   put fedwiki_ConstructUrlFromSlug (wikiDomain, pSlug) into someURL
-   return someURL
-end help_ConstructURL
 
 
 --> Help | Menu
