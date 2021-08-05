@@ -59,11 +59,11 @@ getprop disabled_CreateMenuPage [hKey]
    end if
 end disabled_CreateMenuPage
 
-private function _Stackname hKey
+private function _StackName hKey
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put the stack_Name of hObject into stackName
    return stackName
-end _Stackname
+end _StackName
 
 getprop disabled_MenuHandlerHelp [hKey]
    if LocalArray ["isMenu"] is true then
@@ -87,7 +87,6 @@ end disabled_HandlerHelp
 on menu_HandlerHelp hKey
    launch_HkeyHelp hKey
    if the result is empty then
-      breakpoint
       lcw_CreateHandlerHelp hKey
       put the result into pageArray
       if pageArray is not an array then
@@ -111,7 +110,7 @@ on menu_DisplayVersions hKey
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    put the result into shortHkey
    --
-   put the git_Permalink [shortHkey] of hObject into webPermalink
+   put the github_Permalink [shortHkey] of hObject into webPermalink
    --
    launch url webPermalink
 end menu_DisplayVersions
@@ -179,8 +178,18 @@ end submenu_Dev
 
 --> Dev | Menu
 -
+on _TestRawPermalink hKey
+   -- not working
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put the result into shortHkey
+   --
+   put the github_RawPermalink of hObject into rawPermalink
+   --
+   launch url rawPermalink
+end _TestRawPermalink
+
 on _CreateMenuPage hKey
-   put _Stackname (hKey) into stackName
+   put _StackName (hKey) into stackName
    put help_ConstructMenuPageTitle (stackName) into gMenuTitle
    --
    help_CreateMenu gMenuTitle
@@ -189,7 +198,7 @@ on _CreateMenuPage hKey
 end _CreateMenuPage
 
 on _UpdateMenuPage hKey
-   put _Stackname (hKey) into stackName
+   put _StackName (hKey) into stackName
    put help_ConstructMenuPageTitle (stackName) into gMenuTitle
    --
    help_UpdateMenu gMenuTitle, "reference"

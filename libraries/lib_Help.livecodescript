@@ -43,6 +43,19 @@ end script_MarkdownHandlerindex
 
 --> Working on
 -
+private command _AddGitHubObjectCurlyData @curlyData, sObject
+   put the github_LaunchURL of sObject into githubURL
+   --
+   put githubURL && "github" into curlyData ["all"]["github link"]
+   --
+   put githubURL && "github" into githubLink
+   put "You can view the source here - [" & githubLink & "]" into githubPara
+   put githubPara into curlyData ["id"]["8869c0772777be8e"]
+end _AddGitHubObjectCurlyData
+
+
+--> LCW | HandlerHelp
+-
 command lcw_CreateHandlerHelp hKey, pScriptHelp
    put hkey_IsMenuHandler (hKey) into isMenuHandler
    switch
@@ -329,16 +342,6 @@ end help_FetchTemplateJson
 
 --> Private
 -
-private command _AddGithubObjectCurlyData @curlyData, sObject
-   put the github_LaunchURL of sObject into githubURL
-   --
-   put githubURL && "github" into curlyData ["all"]["github link"]
-   --
-   put githubURL && "github" into githubLink
-   put "You can view the source here - [" & githubLink & "]" into githubPara
-   put githubPara into curlyData ["id"]["8869c0772777be8e"]
-end _AddGithubObjectCurlyData
-
 private command _AddObjectCurlyData @curlyData, scriptType, sObject
    put the stack_Name of sObject into stackName
    --
