@@ -65,7 +65,7 @@ on menu_Help sObject
 end menu_Help
 
 on menu_CreateHelp sObject
-   lcw_CreateObjectHelp sObject
+   help_CreateFromObject sObject
    launch_ObjectHelp sObject
 end menu_CreateHelp
 
@@ -73,6 +73,21 @@ on menu_UpdateHelp sObject
    lcw_UpdateObjectHelp sObject
    launch_ObjectHelp sObject
 end menu_UpdateHelp
+
+on menu_ProjectHelp sObject
+   put the project_Name of sObject into projectName
+   launch_ProjectHelp projectName
+   if the result is empty then
+      if exists (stack projectName) is false then
+         lcw_AnswerWarning "Cannot locate project home stacl '[[projectName]]", projectName
+      end if
+      
+      put the name of stack projectName into homeStackObject
+      help_CreateFromObject homeStackObject
+      --
+      launch_ProjectHelp projectName
+   end if
+end menu_ProjectHelp
 
 on _
 end _

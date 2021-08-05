@@ -1,6 +1,7 @@
 ﻿script "lib_Help"
 --> MetaData
 -
+copyright: David Bovill
 license: GPLv3
 name: lib_Help
 type: library
@@ -9,7 +10,7 @@ deps: lcw_Wiki
 
 /*
 lcw_Help uses the livecode.world federated wiki to store it's help.
-As such you need to initiate the lcw_Wiki rpject for these handelrs to work.
+As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 */
 
 --> Props
@@ -43,14 +44,43 @@ end script_MarkdownHandlerindex
 
 --> Working on
 -
+command help_CreateFromObject sObject
+   put the stack_Name of sObject into stackName
+   put the script_Type of sObject into scriptType
+   switch scriptType
+      case "controller"
+      case "menu"
+         put help_ConstructMenuPageTitle (stackName) into gMenuTitle
+         help_CreateMenu gMenuTitle
+         break
+      case "transport"
+      default
+         put the script_MetaData ["script_Help"] of sObject into pScriptHelp
+         put help_ObjectCurlyData (sObject, scriptType) into curlyData
+         put curlyData ["title"] into pageTitle
+         --
+         help_Create pageTitle, scriptType, curlyData, pScriptHelp
+         put the result into shellResult
+         return shellResult
+   end switch
+end help_CreateFromObject
+
+command lcw_UpdateObjectHelp sObject
+   -- does not use script_Help to update first paragraph
+   put lcw_FetchObjectPageArray (sObject) into pageArray
+   put help_ObjectCurlyData (sObject) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreObjectPageArray sObject, pageArray
+end lcw_UpdateObjectHelp
+
 private command _AddGitHubObjectCurlyData @curlyData, sObject
-   put the github_LaunchURL of sObject into githubURL
-   --
-   put githubURL && "github" into curlyData ["all"]["github link"]
+   put the github_LaunchURL of sObject into objectLink
+   put objectLink into curlyData ["all"]["github link"]
+   put the github_ProjectURL of sObject into curlyData ["all"]["project link"]
    --
    put githubURL && "github" into githubLink
-   put "You can view the source here - [" & githubLink & "]" into githubPara
-   put githubPara into curlyData ["id"]["8869c0772777be8e"]
+   put "You can view the source for [[sObject]] on [" & objectLink && "github" & "]" into githubPara
+   put merge (githubPara) into curlyData ["id"]["8869c0772777be8e"]
 end _AddGitHubObjectCurlyData
 
 
@@ -81,36 +111,6 @@ command lcw_UpdateHandlerHelp hKey
    curly_MergePageArray pageArray, curlyData
    lcw_StoreHandlerArray hKey, pageArray
 end lcw_UpdateHandlerHelp
-
-command lcw_CreateObjectHelp sObject
-   put the stack_Name of sObject into stackName
-   put the script_Type of sObject into scriptType
-   switch scriptType
-      case "controller"
-      case "menu"
-         put help_ConstructMenuPageTitle (stackName) into gMenuTitle
-         help_CreateMenu gMenuTitle
-         break
-      case "transport"
-      default
-         put the script_MetaData ["script_Help"] of sObject into pScriptHelp
-         --
-         put help_ObjectCurlyData (sObject, scriptType) into curlyData
-         put curlyData ["title"] into pageTitle
-         --
-         help_Create pageTitle, scriptType, curlyData, pScriptHelp
-         put the result into shellResult
-         return shellResult
-   end switch
-end lcw_CreateObjectHelp
-
-command lcw_UpdateObjectHelp sObject
-   -- does not use script_Help to update first paragraph
-   put lcw_FetchObjectPageArray (sObject) into pageArray
-   put help_ObjectCurlyData (sObject) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   lcw_StoreObjectPageArray sObject, pageArray
-end lcw_UpdateObjectHelp
 
 
 --> Help | Construct
@@ -184,10 +184,10 @@ function help_HkeyCurlyData hKey, pUpdate
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    --
    put the stack_Name of hObject into stackName
-   curly_SetData curlyData, "stackName", stackName
+   put stackName into curlyData ["all"]["stackName"]
    --
    put the project_Name of hObject into projectName
-   curly_SetData curlyData, "projectName", projectName
+   put projectName into curlyData ["all"]["projectName"]
    --  
    put the github_Permalink [hKey] of hObject into curlyData ["all"]["githubPermalink"]
    -- put the github_HandlerURL [hKey] of hObject into curlyData ["all"]["githubHandlerURL"]
@@ -242,15 +242,17 @@ function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
    pageArray_Rename pageArray, pageTitle
    curly_MergePageArray pageArray, curlyData
    pageArray_StripJournal pageArray
-   pageArray_AddFork pageArray, "handler.livecode.world,model.livecode.world,fedwiki.org"
+   put "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,fedwiki.org" into forkDomains
+   set the wholematches to true
+   put itemOffset (wikiDomain, forkDomains) into itemNum
+   delete item itemNum of forkDomains
+   pageArray_AddFork pageArray, forkDomains
    return pageArray
 end help_FetchNewPageArray
 
 command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    put help_ConstructDomain (scriptType) into helpDomain
-   --
    put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
-   --
    if pageArray is empty then
       return merge ("Error, cannot find template on '[[wikiDomain]]' for '[[scriptType]]'")
    end if
@@ -259,31 +261,25 @@ command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    pageArray_Store helpDomain, pageSlug, pageArray
    put the result into shellResult
    if item 1 of shellResult is "error" then
-      -- error, fetching ip address for droplet AtopiaDropletName
       return shellResult
    else
       return pageArray
    end if
 end help_Create
 
-
---> Help | Construct
--
 function help_ObjectCurlyData sObject, scriptType
    local curlyData
    --   
-   -- put hkey_GetDotText (sObject) into curlyData ["id"]["b6853287820608f3"]   
    put the object_Yaml of sObject into curlyData ["id"]["da8cf69872f38050"]
    --
-   put the script_ExternalCalls of sObject into externalCalls
    put the script_HandlerNames [true] of sObject into handlerNames
+   put the script_ExternalCalls of sObject into externalCalls
    --
    put fedwiki_MarkdownIndex (handlerNames) into curlyData ["id"]["5ac622dfbefa2589"]
    put fedwiki_HkeyMarkdownIndex (externalCalls) into curlyData ["id"]["8b1940e31f034b01"]
    --
    _AddGithubObjectCurlyData curlyData, sObject
    _AddObjectCurlyData curlyData, scriptType, sObject
-   -- put the result into pageTitle
    --
    return curlyData
 end help_ObjectCurlyData
@@ -351,6 +347,7 @@ end help_FetchTemplateJson
 -
 private command _AddObjectCurlyData @curlyData, scriptType, sObject
    put the stack_Name of sObject into stackName
+   put the project_Name of sObject into projectName 
    --
    switch scriptType
       case "menu"
@@ -376,6 +373,19 @@ private command _AddObjectCurlyData @curlyData, scriptType, sObject
          put the project_Deps of sObject into projectDeps
          put fedwiki_MarkdownIndex (projectDeps) into markdownIndex
          put markdownIndex into curlyData ["all"]["Project Dep List"]
+         --
+         put project_GetStackNameArray (projectName) into stackNameArray
+         repeat for each item shortFolder in "Libraries,Models,Controllers,Modules,Views"
+            put stackNameArray [shortFolder] into sArray
+            put the keys of sArray into someIndex
+            if someIndex is empty then next repeat
+            
+            put "#" && shortFolder & CR&CR after pMarkdown
+            sort someIndex
+            put fedwiki_MarkdownIndex (someIndex) & CR&CR after pMarkdown
+         end repeat
+         delete char -1 of pMarkdown
+         put pMarkdown into curlyData ["all"]["Project Components"]
          break
       case "library"
          -- put "8869c0772777be8e" into githubLinkID
@@ -388,6 +398,10 @@ private command _AddObjectCurlyData @curlyData, scriptType, sObject
    put stackName into curlyData ["title"]
    return stackName
 end _AddObjectCurlyData
+
+private command _AddProjectArrayBit @curlyData, shortFolder, stackNameArray
+    put markdownIndex into curlyData ["all"][shortFolder]
+end _AddProjectArrayBit
 
 private command _SetHkeyPageItemDictionary @curlyData
    curly_SetItemIDArray curlyData, "refArray", "4ecda1442570d900"

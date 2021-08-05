@@ -1,10 +1,15 @@
 ﻿script "lib_MenuHelp"
 --> MetaData
 -
+copyright: David Bovill
 license: GPLv3
 name: lib_MenuHelp
 type: library
 version: 0.1
+
+/*
+This library is for creating and displaying help for LCW menus in wiki.
+*/
 
 
 --> Working on
@@ -50,6 +55,13 @@ command help_LaunchMenu stackName
    launch url someURL
    return someURL
 end help_LaunchMenu
+
+command launch_ProjectHelp projectName
+   put the help_Url [true] of stack projectName into someURL
+   if someURL is empty then return empty
+   launch url someURL
+   return someURL
+end launch_ProjectHelp
 
 command help_LaunchMenuSubdomain stackName
    put help_ConstructMenuPageTitle (stackName) into pageTitle
