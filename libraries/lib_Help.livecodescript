@@ -44,6 +44,49 @@ end script_MarkdownHandlerindex
 
 --> Working on
 -
+
+--> Help | Update
+-
+command help_UpdateFromHkey hKey
+   put lcw_FetchHandlerArray (hKey) into pageArray
+   put help_HkeyCurlyData (hKey, true) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreHandlerArray hKey, pageArray
+end help_UpdateFromHkey
+
+command help_UpdateFromObject sObject
+   -- does not use script_Help to update first paragraph
+   put lcw_FetchObjectPageArray (sObject) into pageArray
+   put help_ObjectCurlyData (sObject) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreObjectPageArray sObject, pageArray
+end help_UpdateFromObject
+
+
+--> Help | Create
+-
+command help_CreateFromHkey hKey, pScriptHelp
+   put hkey_IsMenuHandler (hKey) into isMenuHandler
+   switch
+      case isMenuHandler is true
+         help_CreateMenuItem hKey, pScriptHelp
+         break
+      case hkey_IsTransportHandler (hKey)
+         transport_CreateHelp hKey, pScriptHelp
+         break
+      default
+         put help_ConstructHandlerTitle (hKey) into pageTitle
+         put help_HkeyCurlyData (hKey, false) into curlyData
+         --
+         help_Create pageTitle, "handler", curlyData, pScriptHelp
+   end switch
+   put the result into shellResult -- error, fetching ip address for droplet AtopiaDropletName
+   return shellResult
+end help_CreateFromHkey
+
+
+--> Help | Create
+-
 command help_CreateFromObject sObject
    put the stack_Name of sObject into stackName
    put the script_Type of sObject into scriptType
@@ -65,52 +108,41 @@ command help_CreateFromObject sObject
    end switch
 end help_CreateFromObject
 
-command lcw_UpdateObjectHelp sObject
-   -- does not use script_Help to update first paragraph
-   put lcw_FetchObjectPageArray (sObject) into pageArray
-   put help_ObjectCurlyData (sObject) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   lcw_StoreObjectPageArray sObject, pageArray
-end lcw_UpdateObjectHelp
-
-private command _AddGitHubObjectCurlyData @curlyData, sObject
-   put the github_LaunchURL of sObject into objectLink
-   put objectLink into curlyData ["all"]["github link"]
-   put the github_ProjectURL of sObject into curlyData ["all"]["project link"]
+command help_Create pageTitle, scriptType, curlyData, pScriptHelp
+   put help_ConstructDomain (scriptType) into helpDomain
+   put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
+   if pageArray is empty then
+      return merge ("Error, cannot find template on '[[wikiDomain]]' for '[[scriptType]]'")
+   end if
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
    --
-   put githubURL && "github" into githubLink
-   put "You can view the source for [[sObject]] on [" & objectLink && "github" & "]" into githubPara
-   put merge (githubPara) into curlyData ["id"]["8869c0772777be8e"]
-end _AddGitHubObjectCurlyData
+   pageArray_Store helpDomain, pageSlug, pageArray
+   put the result into shellResult
+   if item 1 of shellResult is "error" then
+      return shellResult
+   else
+      return pageArray
+   end if
+end help_Create
 
-
---> LCW | HandlerHelp
--
-command lcw_CreateHandlerHelp hKey, pScriptHelp
-   put hkey_IsMenuHandler (hKey) into isMenuHandler
-   switch
-      case isMenuHandler is true
-         help_CreateMenuItem hKey, pScriptHelp
-         break
-      case hkey_IsTransportHandler (hKey)
-         transport_CreateHelp hKey, pScriptHelp
-         break
-      default
-         put help_ConstructHandlerTitle (hKey) into pageTitle
-         put help_HkeyCurlyData (hKey, false) into curlyData
-         --
-         help_Create pageTitle, "handler", curlyData, pScriptHelp
-   end switch
-   put the result into shellResult -- error, fetching ip address for droplet AtopiaDropletName
-   return shellResult
-end lcw_CreateHandlerHelp
-
-command lcw_UpdateHandlerHelp hKey
-   put lcw_FetchHandlerArray (hKey) into pageArray
-   put help_HkeyCurlyData (hKey, true) into curlyData
+function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
+   put help_ConstructDomain (scriptType) into wikiDomain
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put help_FetchTemplateArray (scriptType) into pageArray
+   if pageArray_Check (pageArray) is false then return empty
+   
+   if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
+   --
+   pageArray_Rename pageArray, pageTitle
    curly_MergePageArray pageArray, curlyData
-   lcw_StoreHandlerArray hKey, pageArray
-end lcw_UpdateHandlerHelp
+   pageArray_StripJournal pageArray
+   put "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,fedwiki.org" into forkDomains
+   set the wholematches to true
+   put itemOffset (wikiDomain, forkDomains) into itemNum
+   delete item itemNum of forkDomains
+   pageArray_AddFork pageArray, forkDomains
+   return pageArray
+end help_FetchNewPageArray
 
 
 --> Help | Construct
@@ -228,45 +260,6 @@ function help_HkeyCurlyData hKey, pUpdate
    return curlyData
 end help_HkeyCurlyData
 
-
---> Help
--
-function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
-   put help_ConstructDomain (scriptType) into wikiDomain
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   put help_FetchTemplateArray (scriptType) into pageArray
-   if pageArray_Check (pageArray) is false then return empty
-   
-   if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
-   --
-   pageArray_Rename pageArray, pageTitle
-   curly_MergePageArray pageArray, curlyData
-   pageArray_StripJournal pageArray
-   put "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,fedwiki.org" into forkDomains
-   set the wholematches to true
-   put itemOffset (wikiDomain, forkDomains) into itemNum
-   delete item itemNum of forkDomains
-   pageArray_AddFork pageArray, forkDomains
-   return pageArray
-end help_FetchNewPageArray
-
-command help_Create pageTitle, scriptType, curlyData, pScriptHelp
-   put help_ConstructDomain (scriptType) into helpDomain
-   put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
-   if pageArray is empty then
-      return merge ("Error, cannot find template on '[[wikiDomain]]' for '[[scriptType]]'")
-   end if
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   --
-   pageArray_Store helpDomain, pageSlug, pageArray
-   put the result into shellResult
-   if item 1 of shellResult is "error" then
-      return shellResult
-   else
-      return pageArray
-   end if
-end help_Create
-
 function help_ObjectCurlyData sObject, scriptType
    local curlyData
    --   
@@ -283,25 +276,6 @@ function help_ObjectCurlyData sObject, scriptType
    --
    return curlyData
 end help_ObjectCurlyData
-
-
---> LCW | Handler | Model | Wrappers
--
-function lcw_FetchHandlerTags hKey
-   put lcw_FetchPageData (hKey) into pageData
-   put pageData_GetText (pageData, "handlerTags") into handlerTags
-   replace "[[" with empty in handlerTags
-   replace "]]" with empty in handlerTags
-   replace "-" with empty in handlerTags
-   replace space with empty in handlerTags
-   return handlerTags
-end lcw_FetchHandlerTags
-
-function lcw_FetchPageData hKey
-   put lcw_FetchHandlerArray (hKey) into pageData
-   _SetHkeyPageItemDictionary pageData
-   return lcw_FetchPageData
-end lcw_FetchPageData
 
 
 --> Help
@@ -342,102 +316,68 @@ function help_FetchTemplateJson scriptType
    return pageJSON
 end help_FetchTemplateJson
 
+function help_GetHkeyTags hKey
+   put lcw_FetchPageData (hKey) into pageData
+   put pageData_GetText (pageData, "handlerTags") into handlerTags
+   replace "[[" with empty in handlerTags
+   replace "]]" with empty in handlerTags
+   replace "-" with empty in handlerTags
+   replace space with empty in handlerTags
+   return handlerTags
+end help_GetHkeyTags
+
+
+--> LCW | Handler | Model
+-
+/*
+Here we reference handlers stared on "handler.livecode.world"
+We define a new concept "handerArray" to mean a "pageArray" for handlers.
+*/
+
+function lcw_FetchPageData hKey
+   put lcw_FetchHandlerArray (hKey) into pageData
+   _SetHkeyPageItemDictionary pageData
+   return pageData
+end lcw_FetchPageData
+
+function lcw_FetchHandlerArray hKey
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put fedwiki_ConstructSlug (hName) into pageSlug
+   --
+   put pageArray_Fetch ("handler.livecode.world", pageSlug) into pageArray
+   return pageArray
+end lcw_FetchHandlerArray
+
+command lcw_StoreHandlerArray hKey, pageArray
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put fedwiki_ConstructSlug (hName) into pageSlug
+   --
+   pageArray_Store "handler.livecode.world", pageSlug, pageArray
+   put the result into shellResult
+   return shellResult
+end lcw_StoreHandlerArray
+
+function lcw_FetchObjectPageArray sObject
+   _ObjectDomainInfo sObject, pageTitle, pageSlug, wikiDomain
+   put pageArray_Fetch (wikiDomain, pageSlug) into pageArray
+   return pageArray
+end lcw_FetchObjectPageArray
+
+command lcw_StoreObjectPageArray sObject, pageArray
+   _ObjectDomainInfo sObject, pageTitle, pageSlug, wikiDomain
+   pageArray_Store wikiDomain, pageSlug, pageArray
+   return the result
+end lcw_StoreObjectPageArray
+
 
 --> Private
 -
-private command _AddObjectCurlyData @curlyData, scriptType, sObject
-   put the stack_Name of sObject into stackName
-   put the project_Name of sObject into projectName 
-   --
-   switch scriptType
-      case "menu"
-      case "controller"
-         -- put the script_Metadata ["name"] of sObject into stackName
-         put help_ConstructMenuPageTitle (stackName) into menuTitle
-         put the menu_Handlers [menuTitle] of sObject into mHandlers
-         put mHandlers into curlyData ["all"]["Menu Handler Index"]
-         --
-         put help_ConstructMenuPageTitle (stackName) into pageTitle
-         put pageTitle into curlyData ["title"]
-         --
-         return pageTitle
-      case "ide"         
-         put the script_MarkdownHandlerindex of sObject into curlyData ["all"]["Handler List"]
-         put relFolder into curlyData ["all"]["rel folder"]
-         put shortFile into curlyData ["all"]["short file"]
-         break
-      case "transport"
-         break
-      case "home"
-      case "project"
-         put the project_Deps of sObject into projectDeps
-         put fedwiki_MarkdownIndex (projectDeps) into markdownIndex
-         put markdownIndex into curlyData ["all"]["Project Dep List"]
-         --
-         put project_GetStackNameArray (projectName) into stackNameArray
-         repeat for each item shortFolder in "Libraries,Models,Controllers,Modules,Views"
-            put stackNameArray [shortFolder] into sArray
-            put the keys of sArray into someIndex
-            if someIndex is empty then next repeat
-            
-            put "#" && shortFolder & CR&CR after pMarkdown
-            sort someIndex
-            put fedwiki_MarkdownIndex (someIndex) & CR&CR after pMarkdown
-         end repeat
-         delete char -1 of pMarkdown
-         put pMarkdown into curlyData ["all"]["Project Components"]
-         break
-      case "library"
-         -- put "8869c0772777be8e" into githubLinkID
-         --put the script_MarkdownHandlerindex of tObject into curlyData ["all"]["Handler List"]
-         -- put the script_Deps of tObject into curlyData ["all"]["Stack Deps"]
-      default
-         -- some random object?
-   end switch
-   
-   put stackName into curlyData ["title"]
-   return stackName
-end _AddObjectCurlyData
-
-private command _AddProjectArrayBit @curlyData, shortFolder, stackNameArray
-    put markdownIndex into curlyData ["all"][shortFolder]
-end _AddProjectArrayBit
-
-private command _SetHkeyPageItemDictionary @curlyData
-   curly_SetItemIDArray curlyData, "refArray", "4ecda1442570d900"
-   curly_SetItemIDArray curlyData, "someHandler", "39e7dd9a1560241a"
-   curly_SetItemIDArray curlyData, "handlerSyntax", "54f306e694aa494b"
-   curly_SetItemIDArray curlyData, "handlerMetadata", "da8cf69872f38050"
-   curly_SetItemIDArray curlyData, "callList", "0c0d997d16532d79"
-   curly_SetItemIDArray curlyData, "handlerTags", "26d290f03f2aa26e"
-   curly_SetItemIDArray curlyData, "dotText", "b6853287820608f3"
-   curly_SetItemIDArray curlyData, "paramList", "0a99c44502e29156"
-   curly_SetItemIDArray curlyData, "githubPara", "8869c0772777be8e"
-end _SetHkeyPageItemDictionary
-
-private function _ConstructHandlerTags hKey, pUpdate
-   local handlerTagList
-   
-   put hkey_ConstructKeywords (hKey) into handlerTags
-   put "from,to" into notThese
-   if pUpdate is true then
-      put comma after handlerTags
-      put lcw_FetchHandlerTags (hkey) into lcwHandlerTags
-      repeat for each item lcwHandlerTag in lcwHandlerTags
-         if lcwHandlerTag is not among the items of handlerTags then
-            put lcwHandlerTag & comma after handlerTags
-         end if
-      end repeat
-      delete char -1 of handlerTags
-   end if
-   
-   repeat for each line someTag in handlerTags
-      if someTag is among the items of notThese then next repeat
-      put "[[" & someTag & "]], " after handlerTagList
-   end repeat
-   delete char -2 to -1 of handlerTagList
-   return handlerTagList
-end _ConstructHandlerTags
+private command _ObjectDomainInfo sObject, @pageTitle, @pageSlug, @wikiDomain
+   put the stack_Name of sObject into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put the script_Type of sObject into scriptType
+   put help_ConstructDomain (scriptType) into wikiDomain
+end _ObjectDomainInfo
 
 private function _ConstructHandlerMetadata hKey, projectName
    put hkey_GetType (hKey) into handlerType
@@ -504,6 +444,106 @@ private function _ConstructParamList someHandler
    return paramTable
 end _ConstructParamList
 
+private command _AddObjectCurlyData @curlyData, scriptType, sObject
+   put the stack_Name of sObject into stackName
+   put the project_Name of sObject into projectName 
+   --
+   switch scriptType
+      case "menu"
+      case "controller"
+         -- put the script_Metadata ["name"] of sObject into stackName
+         put help_ConstructMenuPageTitle (stackName) into menuTitle
+         put the menu_Handlers [menuTitle] of sObject into mHandlers
+         put mHandlers into curlyData ["all"]["Menu Handler Index"]
+         --
+         put help_ConstructMenuPageTitle (stackName) into pageTitle
+         put pageTitle into curlyData ["title"]
+         --
+         return pageTitle
+      case "ide"         
+         put the script_MarkdownHandlerindex of sObject into curlyData ["all"]["Handler List"]
+         put relFolder into curlyData ["all"]["rel folder"]
+         put shortFile into curlyData ["all"]["short file"]
+         break
+      case "transport"
+         break
+      case "home"
+      case "project"
+         put the project_Deps of sObject into projectDeps
+         put fedwiki_MarkdownIndex (projectDeps) into markdownIndex
+         put markdownIndex into curlyData ["all"]["Project Dep List"]
+         --
+         put project_GetStackNameArray (projectName) into stackNameArray
+         repeat for each item shortFolder in "Libraries,Models,Controllers,Modules,Views"
+            put stackNameArray [shortFolder] into sArray
+            put the keys of sArray into someIndex
+            if someIndex is empty then next repeat
+            
+            put "#" && shortFolder & CR&CR after pMarkdown
+            sort someIndex
+            put fedwiki_MarkdownIndex (someIndex) & CR&CR after pMarkdown
+         end repeat
+         delete char -1 of pMarkdown
+         put pMarkdown into curlyData ["all"]["Project Components"]
+         break
+      case "library"
+         -- put "8869c0772777be8e" into githubLinkID
+         --put the script_MarkdownHandlerindex of tObject into curlyData ["all"]["Handler List"]
+         -- put the script_Deps of tObject into curlyData ["all"]["Stack Deps"]
+      default
+         -- some random object?
+   end switch
+   
+   put stackName into curlyData ["title"]
+   return stackName
+end _AddObjectCurlyData
 
---> Private
--
+private command _AddProjectArrayBit @curlyData, shortFolder, stackNameArray
+   put markdownIndex into curlyData ["all"][shortFolder]
+end _AddProjectArrayBit
+
+private command _SetHkeyPageItemDictionary @curlyData
+   curly_SetItemIDArray curlyData, "refArray", "4ecda1442570d900"
+   curly_SetItemIDArray curlyData, "someHandler", "39e7dd9a1560241a"
+   curly_SetItemIDArray curlyData, "handlerSyntax", "54f306e694aa494b"
+   curly_SetItemIDArray curlyData, "handlerMetadata", "da8cf69872f38050"
+   curly_SetItemIDArray curlyData, "callList", "0c0d997d16532d79"
+   curly_SetItemIDArray curlyData, "handlerTags", "26d290f03f2aa26e"
+   curly_SetItemIDArray curlyData, "dotText", "b6853287820608f3"
+   curly_SetItemIDArray curlyData, "paramList", "0a99c44502e29156"
+   curly_SetItemIDArray curlyData, "githubPara", "8869c0772777be8e"
+end _SetHkeyPageItemDictionary
+
+private function _ConstructHandlerTags hKey, pUpdate
+   local handlerTagList
+   
+   put hkey_ConstructKeywords (hKey) into handlerTags
+   put "from,to" into notThese
+   if pUpdate is true then
+      put comma after handlerTags
+      put help_GetHkeyTags (hkey) into lcwHandlerTags
+      repeat for each item lcwHandlerTag in lcwHandlerTags
+         if lcwHandlerTag is not among the items of handlerTags then
+            put lcwHandlerTag & comma after handlerTags
+         end if
+      end repeat
+      delete char -1 of handlerTags
+   end if
+   
+   repeat for each line someTag in handlerTags
+      if someTag is among the items of notThese then next repeat
+      put "[[" & someTag & "]], " after handlerTagList
+   end repeat
+   delete char -2 to -1 of handlerTagList
+   return handlerTagList
+end _ConstructHandlerTags
+
+private command _AddGitHubObjectCurlyData @curlyData, sObject
+   put the github_LaunchURL of sObject into objectLink
+   put objectLink into curlyData ["all"]["github link"]
+   put the github_ProjectURL of sObject into curlyData ["all"]["project link"]
+   --
+   put githubURL && "github" into githubLink
+   put "You can view the source for [[sObject]] on [" & objectLink && "github" & "]" into githubPara
+   put merge (githubPara) into curlyData ["id"]["8869c0772777be8e"]
+end _AddGitHubObjectCurlyData

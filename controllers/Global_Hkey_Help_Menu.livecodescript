@@ -87,7 +87,7 @@ end disabled_HandlerHelp
 on menu_HandlerHelp hKey
    launch_HkeyHelp hKey
    if the result is empty then
-      lcw_CreateHandlerHelp hKey
+      help_CreateFromHkey hKey
       put the result into pageArray
       if pageArray is not an array then
          breakpoint

@@ -70,7 +70,7 @@ on menu_CreateHelp sObject
 end menu_CreateHelp
 
 on menu_UpdateHelp sObject
-   lcw_UpdateObjectHelp sObject
+   help_UpdateFromObject sObject
    launch_ObjectHelp sObject
 end menu_UpdateHelp
 
