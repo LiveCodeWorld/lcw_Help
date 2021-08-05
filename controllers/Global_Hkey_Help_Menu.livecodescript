@@ -107,6 +107,15 @@ on menu_MenuHandlerHelp hKey
    end if
 end menu_MenuHandlerHelp
 
+on menu_DisplayVersions hKey
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put the result into shortHkey
+   --
+   put the git_Permalink [shortHkey] of hObject into webPermalink
+   --
+   launch url webPermalink
+end menu_DisplayVersions
+
 on menu_LaunchGithubUrl hKey
    launch_HkeyGitHub hKey
 end menu_LaunchGithubUrl
