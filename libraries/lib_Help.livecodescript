@@ -167,15 +167,13 @@ end help_ConstructTransportTitle
 
 function help_HkeyCurlyData hKey, pUpdate
    -- also used by handlers in "lib_Transport"
-   -- uses both "github_LaunchURL" and "github_RelativePath"
    local curlyData
    --
-   -- newer tider style
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the github_Permalink [hKey] of hObject into curlyData ["all"]["githubPermalink"]
    put the github_HandlerURL [hKey] of hObject into curlyData ["all"]["githubHandlerURL"]
    put hkey_GetType (hKey) into curlyData ["all"]["handlerType"]
-   
-   -- older exerimental style
+   -- older style
    help_SetHkeyInfo hKey, wikiDomain, pageSlug, pageTitle
    put storyArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
    curly_SetReplaceArray curlyData, itemArray, "4ecda1442570d900"
