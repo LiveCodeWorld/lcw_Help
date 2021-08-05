@@ -85,14 +85,15 @@ end disabled_HandlerHelp
 --> Global | Hkey | Help | Menu
 -
 on menu_HandlerHelp hKey
-   launch_MenuItemHelp hKey
+   launch_HkeyHelp hKey
    if the result is empty then
+      breakpoint
       lcw_CreateHandlerHelp hKey
       put the result into pageArray
       if pageArray is not an array then
          breakpoint
       else
-         launch_MenuItemHelp hKey
+         launch_HkeyHelp hKey
       end if
    end if
 end menu_HandlerHelp
@@ -107,13 +108,7 @@ on menu_MenuHandlerHelp hKey
 end menu_MenuHandlerHelp
 
 on menu_LaunchGithubUrl hKey
-   hkeyLine_Deconstruct hKey, hName, hType, sObject
-   --
-   put the github_HandlerURL [hKey] of sObject into githubURL
-   launch url githubURL
-   if the result is not empty then
-      put githubURL
-   end if
+   launch_HkeyGitHub hKey
 end menu_LaunchGithubUrl
 
 on _

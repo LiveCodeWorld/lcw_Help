@@ -12,8 +12,7 @@ lcw_Help uses the livecode.world federated wiki to store it's help.
 As such you need to initiate the lcw_Wiki rpject for these handelrs to work.
 */
 
-
---> Working on
+--> Props
 -
 getprop help_Url [pCheckURL]
    put the long id of the target into tObject
@@ -22,6 +21,98 @@ getprop help_Url [pCheckURL]
    put help_ConstructURL (stackName, scriptType, pCheckURL) into someURL
    return someURL
 end help_Url
+
+getprop script_MarkdownHandlerIndex
+   put the long id of the target into hObject
+   put the revAvailableHandlers of hObject into hTable
+   repeat for each line hTableLine in hTable
+      put word 1 of hTableLine into hType
+      if char 1 of hType = "P" then next repeat
+      
+      put word 2 of hTableLine into hName
+      put word 3 of hTableLine + 1 into sLineNum
+      put word 4 of hTableLine + 1 into eLineNum
+      
+      put github_handlerURL (hObject, sLineNum, eLineNum) into githubURL 
+      put "- [" & hName & "](" & githubURL & ")" & CR after markdownIndex
+   end repeat
+   delete char -1 of markdownIndex
+   return markdownIndex
+end script_MarkdownHandlerindex
+
+
+--> Working on
+-
+command lcw_CreateHandlerHelp hKey, pScriptHelp
+   put hkey_IsMenuHandler (hKey) into isMenuHandler
+   switch
+      case isMenuHandler is true
+         help_CreateMenuItem hKey, pScriptHelp
+         break
+      case hkey_IsTransportHandler (hKey)
+         transport_CreateHelp hKey, pScriptHelp
+         break
+      default
+         put help_ConstructHandlerTitle (hKey) into pageTitle
+         put help_HkeyCurlyData (hKey, false) into curlyData
+         --
+         help_Create pageTitle, "handler", curlyData, pScriptHelp
+   end switch
+   put the result into shellResult -- error, fetching ip address for droplet AtopiaDropletName
+   return shellResult
+end lcw_CreateHandlerHelp
+
+command lcw_UpdateHandlerHelp hKey
+   put lcw_FetchHandlerArray (hKey) into pageArray
+   put help_HkeyCurlyData (hKey, true) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreHandlerArray hKey, pageArray
+end lcw_UpdateHandlerHelp
+
+command lcw_CreateObjectHelp sObject
+   put the stack_Name of sObject into stackName
+   put the script_Type of sObject into scriptType
+   switch scriptType
+      case "controller"
+      case "menu"
+         put help_ConstructMenuPageTitle (stackName) into gMenuTitle
+         help_CreateMenu gMenuTitle
+         break
+      case "transport"
+      default
+         put the script_MetaData ["script_Help"] of sObject into pScriptHelp
+         --
+         put help_ObjectCurlyData (sObject, scriptType) into curlyData
+         put curlyData ["title"] into pageTitle
+         --
+         help_Create pageTitle, scriptType, curlyData, pScriptHelp
+         put the result into shellResult
+         return shellResult
+   end switch
+end lcw_CreateObjectHelp
+
+command lcw_UpdateObjectHelp sObject
+   -- does not use script_Help to update first paragraph
+   put lcw_FetchObjectPageArray (sObject) into pageArray
+   put help_ObjectCurlyData (sObject) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreObjectPageArray sObject, pageArray
+end lcw_UpdateObjectHelp
+
+
+--> Help | Construct
+-
+function help_ConstructHandlerSlug hKey
+   put help_ConstructHandlerTitle (hKey) into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   return pageSlug
+end help_ConstructHandlerSlug
+
+function help_ConstructHandlerTitle hKey
+   -- here we can experiment with different types of names
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   return hName
+end help_ConstructHandlerTitle
 
 function help_ConstructDomain scriptType
    if scriptType = "controller" then
@@ -74,27 +165,6 @@ function help_ConstructTransportTitle stackName
    return pageTitle
 end help_ConstructTransportTitle
 
-
---> Help | github_handlerURL
--
-getprop script_MarkdownHandlerIndex
-   put the long id of the target into hObject
-   put the revAvailableHandlers of hObject into hTable
-   repeat for each line hTableLine in hTable
-      put word 1 of hTableLine into hType
-      if char 1 of hType = "P" then next repeat
-      
-      put word 2 of hTableLine into hName
-      put word 3 of hTableLine + 1 into sLineNum
-      put word 4 of hTableLine + 1 into eLineNum
-      
-      put github_handlerURL (hObject, sLineNum, eLineNum) into githubURL 
-      put "- [" & hName & "](" & githubURL & ")" & CR after markdownIndex
-   end repeat
-   delete char -1 of markdownIndex
-   return markdownIndex
-end script_MarkdownHandlerindex
-
 function help_HkeyCurlyData hKey, pUpdate
    -- also used by handlers in "lib_Transport"
    -- uses both "github_LaunchURL" and "github_RelativePath"
@@ -141,37 +211,22 @@ function help_HkeyCurlyData hKey, pUpdate
 end help_HkeyCurlyData
 
 
---> LCW | Help
+--> Help
 -
-command lcw_CreateObjectHelp sObject
-   put the stack_Name of sObject into stackName
-   put the script_Type of sObject into scriptType
-   switch scriptType
-      case "controller"
-      case "menu"
-         put help_ConstructMenuPageTitle (stackName) into gMenuTitle
-         help_CreateMenu gMenuTitle
-         break
-      case "transport"
-      default
-         put the script_MetaData ["script_Help"] of sObject into pScriptHelp
-         --
-         put help_ObjectCurlyData (sObject, scriptType) into curlyData
-         put curlyData ["title"] into pageTitle
-         --
-         help_Create pageTitle, scriptType, curlyData, pScriptHelp
-         put the result into shellResult
-         return shellResult
-   end switch
-end lcw_CreateObjectHelp
-
-command lcw_UpdateObjectHelp sObject
-   -- does not use script_Help to update first paragraph
-   put lcw_FetchObjectPageArray (sObject) into pageArray
-   put help_ObjectCurlyData (sObject) into curlyData
+function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
+   put help_ConstructDomain (scriptType) into wikiDomain
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put help_FetchTemplateArray (scriptType) into pageArray
+   if pageArray_Check (pageArray) is false then return empty
+   
+   if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
+   --
+   pageArray_Rename pageArray, pageTitle
    curly_MergePageArray pageArray, curlyData
-   lcw_StoreObjectPageArray sObject, pageArray
-end lcw_UpdateObjectHelp
+   pageArray_StripJournal pageArray
+   pageArray_AddFork pageArray, "handler.livecode.world,model.livecode.world,fedwiki.org"
+   return pageArray
+end help_FetchNewPageArray
 
 command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    put help_ConstructDomain (scriptType) into helpDomain
@@ -192,59 +247,6 @@ command help_Create pageTitle, scriptType, curlyData, pScriptHelp
       return pageArray
    end if
 end help_Create
-
-
---> Help
--
-function help_ConstructHandlerTitle hKey
-   -- here we can experiment with different types of names
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   return hName
-end help_ConstructHandlerTitle
-
-function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
-   put help_ConstructDomain (scriptType) into wikiDomain
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   put help_FetchTemplateArray (scriptType) into pageArray
-   if pageArray_Check (pageArray) is false then return empty
-   
-   if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
-   --
-   pageArray_Rename pageArray, pageTitle
-   curly_MergePageArray pageArray, curlyData
-   pageArray_StripJournal pageArray
-   pageArray_AddFork pageArray, "handler.livecode.world,model.livecode.world,fedwiki.org"
-   return pageArray
-end help_FetchNewPageArray
-
-
---> LCW | Handler | Help
--
-command lcw_CreateHandlerHelp hKey, pScriptHelp
-   put hkey_IsMenuHandler (hKey) into isMenuHandler
-   switch
-      case isMenuHandler is true
-         help_CreateMenuItem hKey, pScriptHelp
-         break
-      case hkey_IsTransportHandler (hKey)
-         transport_CreateHelp hKey, pScriptHelp
-         break
-      default
-         put help_ConstructHandlerTitle (hKey) into pageTitle
-         put help_HkeyCurlyData (hKey, false) into curlyData
-         --
-         help_Create pageTitle, "handler", curlyData, pScriptHelp
-   end switch
-   put the result into shellResult -- error, fetching ip address for droplet AtopiaDropletName
-   return shellResult
-end lcw_CreateHandlerHelp
-
-command lcw_UpdateHandlerHelp hKey
-   put lcw_FetchHandlerArray (hKey) into pageArray
-   put help_HkeyCurlyData (hKey, true) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   lcw_StoreHandlerArray hKey, pageArray
-end lcw_UpdateHandlerHelp
 
 
 --> Help | Construct

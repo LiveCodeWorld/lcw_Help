@@ -9,7 +9,72 @@ version: 0.1
 
 --> Working on
 -
-function help_ConstructHkeyUrl hKey, pCheckURL
+command launch_HkeyGitHub hKey
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put the github_HandlerURL [hKey] of hObject into githubURL -- uses "revAvailableHandlers"
+   --
+   launch url githubURL
+   if the result is not empty then
+      put githubURL
+   end if
+end launch_HkeyGitHub
+
+
+--> Help | Launch
+-
+command launch_HkeyHelp hKey
+   put help_ConstructHkeyURL (hKey, true) into helpURL
+   if helpURL is empty then return empty
+   --
+   launch url helpURL
+   return helpURL
+end launch_HkeyHelp
+
+command launch_MenuItemHelp hKey
+   put help_ConstructMenuItemUrl (hKey, true) into helpURL
+   if helpURL is empty then return empty
+   --
+   launch url helpURL
+   return helpURL
+end launch_MenuItemHelp
+
+command launch_ObjectHelp tObject
+   put the help_Url of tObject into someURL
+   launch url someURL
+   return someURL
+end launch_ObjectHelp
+
+command help_LaunchMenu stackName
+   put help_ConstructMenuUrl (stackName, true) into someURL
+   if someURL is empty then return empty
+   launch url someURL
+   return someURL
+end help_LaunchMenu
+
+command help_LaunchMenuSubdomain stackName
+   put help_ConstructMenuPageTitle (stackName) into pageTitle
+   put help_MenuSubDomain (pageTitle) into menuSubDomain
+   --
+   put fedwiki_ConstructUrlFromSlug (menuSubDomain) into someURL
+   if someURL is empty then return empty
+   --
+   launch url someURL
+   return someURL
+end help_LaunchMenuSubdomain
+
+
+--> Help | Construct
+-
+function help_ConstructHkeyURL hKey, pCheckURL
+   put help_ConstructHandlerSlug (hKey) into pageSlug
+   put "handler.livecode.world" into wikiDomain
+   if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
+   --
+   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
+   return someURL
+end help_ConstructHkeyURL
+
+function help_ConstructMenuItemUrl hKey, pCheckURL
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put the stack_Name of hObject into stackName
    --
@@ -21,7 +86,7 @@ function help_ConstructHkeyUrl hKey, pCheckURL
    if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
    --
    return helpURL
-end help_ConstructHkeyUrl
+end help_ConstructMenuItemUrl
 
 
 --> Help | Menu | PageTitle
@@ -60,41 +125,6 @@ function menu_StripGlobal gMenuTitle
    put word 1 to -1 of gMenuTitle into pageTitle 
    return pageTitle
 end menu_StripGlobal
-
-
---> Help | Launch
--
-command launch_MenuItemHelp hKey
-   put help_ConstructHkeyUrl (hKey, true) into helpURL
-   if helpURL is empty then return "Error, wiki-page does not exist for:" && hKey
-   --
-   launch url helpURL
-   return helpURL
-end launch_MenuItemHelp
-
-command launch_ObjectHelp tObject
-   put the help_Url of tObject into someURL
-   launch url someURL
-   return someURL
-end launch_ObjectHelp
-
-command help_LaunchMenu stackName
-   put help_ConstructMenuUrl (stackName, true) into someURL
-   if someURL is empty then return empty
-   launch url someURL
-   return someURL
-end help_LaunchMenu
-
-command help_LaunchMenuSubdomain stackName
-   put help_ConstructMenuPageTitle (stackName) into pageTitle
-   put help_MenuSubDomain (pageTitle) into menuSubDomain
-   --
-   put fedwiki_ConstructUrlFromSlug (menuSubDomain) into someURL
-   if someURL is empty then return empty
-   --
-   launch url someURL
-   return someURL
-end help_LaunchMenuSubdomain
 
 
 --> Help

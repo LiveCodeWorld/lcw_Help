@@ -47,6 +47,7 @@ getprop disabled_Help
 end disabled_Help
 
 getprop disabled_CreateHelp
+   if the shiftKey is "Down" then return false
    switch
       case LocalArray ["helpURL"] is not empty
       case LocalArray ["helpActive"] is false
