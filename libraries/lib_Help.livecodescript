@@ -181,10 +181,18 @@ end help_ConstructTransportTitle
 function help_HkeyCurlyData hKey, pUpdate
    -- also used by handlers in "lib_Transport"
    local curlyData
-   --
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   --
+   put the stack_Name of hObject into stackName
+   curly_SetData curlyData, "stackName", stackName
+   --
+   put the project_Name of hObject into projectName
+   curly_SetData curlyData, "projectName", projectName
+   --  
    put the github_Permalink [hKey] of hObject into curlyData ["all"]["githubPermalink"]
-   put the github_HandlerURL [hKey] of hObject into curlyData ["all"]["githubHandlerURL"]
+   -- put the github_HandlerURL [hKey] of hObject into curlyData ["all"]["githubHandlerURL"]
+   put github_GetUrl (stackName) into curlyData ["all"]["githubObjectURL"]
+   --
    put hkey_GetType (hKey) into curlyData ["all"]["handlerType"]
    -- older style
    help_SetHkeyInfo hKey, wikiDomain, pageSlug, pageTitle
@@ -202,8 +210,7 @@ function help_HkeyCurlyData hKey, pUpdate
       curly_SetData curlyData, "dotText", dotText
    end if
    --
-   --  
-   put _ConstructHandlerMetadata (hKey) into handlerMetadata
+   put _ConstructHandlerMetadata (hKey, projectName) into handlerMetadata
    curly_SetData curlyData, "handlerMetadata", handlerMetadata
    --
    put _ConstructHandlerSyntax (someHandler, hKey) into handlerSyntax
@@ -418,13 +425,13 @@ private function _ConstructHandlerTags hKey, pUpdate
    return handlerTagList
 end _ConstructHandlerTags
 
-private function _ConstructHandlerMetadata hKey, relPath
+private function _ConstructHandlerMetadata hKey, projectName
    put hkey_GetType (hKey) into handlerType
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put the github_RelativePath of hObject into relPath
    
    put "Type:" && handlerType & CR after handlerMetaData
-   put "Project:" && the project_Name of hObject & CR after handlerMetaData
+   put "Project:" && projectName & CR after handlerMetaData
    put "Github:" && relPath & CR after handlerMetaData
    put "OS: all" & CR after handlerMetaData
    put "Platforms: all" & CR after handlerMetaData
