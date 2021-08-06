@@ -45,26 +45,31 @@ end script_MarkdownHandlerindex
 --> Working on
 -
 
---> Help | Update
--
-command help_UpdateFromHkey hKey
-   put lcw_FetchHandlerArray (hKey) into pageArray
-   put help_HkeyCurlyData (hKey, true) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   lcw_StoreHandlerArray hKey, pageArray
-end help_UpdateFromHkey
-
-command help_UpdateFromObject sObject
-   -- does not use script_Help to update first paragraph
-   put lcw_FetchObjectPageArray (sObject) into pageArray
-   put help_ObjectCurlyData (sObject) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   lcw_StoreObjectPageArray sObject, pageArray
-end help_UpdateFromObject
-
-
 --> Help | Create
 -
+command help_CreateFromObject sObject
+   put the stack_Name of sObject into stackName
+   put the script_Type of sObject into scriptType
+   switch scriptType
+      case "controller"
+      case "menu"
+         put line 1 of the script_GlobalMenuTitles of sObject into gMenuTitle -- just in case
+         if stackName is not gMenuTitle then breakpoint -- stackName should be gMenuTitle
+         --
+         help_CreateMenu gMenuTitle
+         break
+      case "transport"
+      default
+         put the script_MetaData ["script_Help"] of sObject into pScriptHelp
+         put help_ObjectCurlyData (sObject, scriptType) into curlyData
+         put curlyData ["title"] into pageTitle
+         --
+         help_Create pageTitle, scriptType, curlyData, pScriptHelp
+         put the result into shellResult
+         return shellResult
+   end switch
+end help_CreateFromObject
+
 command help_CreateFromHkey hKey, pScriptHelp
    put hkey_IsMenuHandler (hKey) into isMenuHandler
    switch
@@ -83,30 +88,6 @@ command help_CreateFromHkey hKey, pScriptHelp
    put the result into shellResult -- error, fetching ip address for droplet AtopiaDropletName
    return shellResult
 end help_CreateFromHkey
-
-
---> Help | Create
--
-command help_CreateFromObject sObject
-   put the stack_Name of sObject into stackName
-   put the script_Type of sObject into scriptType
-   switch scriptType
-      case "controller"
-      case "menu"
-         put help_ConstructMenuPageTitle (stackName) into gMenuTitle
-         help_CreateMenu gMenuTitle
-         break
-      case "transport"
-      default
-         put the script_MetaData ["script_Help"] of sObject into pScriptHelp
-         put help_ObjectCurlyData (sObject, scriptType) into curlyData
-         put curlyData ["title"] into pageTitle
-         --
-         help_Create pageTitle, scriptType, curlyData, pScriptHelp
-         put the result into shellResult
-         return shellResult
-   end switch
-end help_CreateFromObject
 
 command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    put help_ConstructDomain (scriptType) into helpDomain
@@ -130,19 +111,46 @@ function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    put help_FetchTemplateArray (scriptType) into pageArray
    if pageArray_Check (pageArray) is false then return empty
-   
    if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
    --
-   pageArray_Rename pageArray, pageTitle
    curly_MergePageArray pageArray, curlyData
-   pageArray_StripJournal pageArray
-   put "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,fedwiki.org" into forkDomains
-   set the wholematches to true
-   put itemOffset (wikiDomain, forkDomains) into itemNum
-   delete item itemNum of forkDomains
-   pageArray_AddFork pageArray, forkDomains
+   help_RenameTemplate pageArray, pageTitle, wikiDomain
+   --
    return pageArray
 end help_FetchNewPageArray
+  
+command help_RenameTemplate @pageArray, pageTitle, pWikiDomain
+   put "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,fedwiki.org" into forkDomains
+   --
+   pageArray_Rename pageArray, pageTitle
+   pageArray_StripJournal pageArray
+   
+   # Strip wikidomain fromm forks (not important)
+   set the wholematches to true
+   put itemOffset (pWikiDomain, forkDomains) into itemNum
+   delete item itemNum of forkDomains
+   
+   # Add forks to journal
+   pageArray_AddFork pageArray, forkDomains
+end help_RenameTemplate
+
+
+--> Help | Update
+-
+command help_UpdateFromHkey hKey
+   put lcw_FetchHandlerArray (hKey) into pageArray
+   put help_HkeyCurlyData (hKey, true) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreHandlerArray hKey, pageArray
+end help_UpdateFromHkey
+
+command help_UpdateFromObject sObject
+   -- does not use script_Help to update first paragraph
+   put lcw_FetchObjectPageArray (sObject) into pageArray
+   put help_ObjectCurlyData (sObject) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreObjectPageArray sObject, pageArray
+end help_UpdateFromObject
 
 
 --> Help | Construct

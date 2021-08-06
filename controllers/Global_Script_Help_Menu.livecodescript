@@ -36,25 +36,25 @@ getprop disabed_UpdateHelp
    end switch
 end disabed_UpdateHelp
 
-getprop disabled_Help
-   switch
-      case LocalArray ["helpURL"] is empty
-      case LocalArray ["helpActive"] is false
-         return "delete"
-      default
-         return false
-   end switch
+-- getprop disabled_Help
+switch
+   case LocalArray ["helpURL"] is empty
+   case LocalArray ["helpActive"] is false
+      return "delete"
+   default
+      return false
+end switch
 end disabled_Help
 
-getprop disabled_CreateHelp
-   if the shiftKey is "Down" then return false
-   switch
-      case LocalArray ["helpURL"] is not empty
-      case LocalArray ["helpActive"] is false
-         return "delete"
-      default
-         return false
-   end switch
+-- getprop disabled_CreateHelp
+if the shiftKey is "Down" then return false
+switch
+   case LocalArray ["helpURL"] is not empty
+   case LocalArray ["helpActive"] is false
+      return "delete"
+   default
+      return false
+end switch
 end disabled_CreateHelp
 
 
@@ -62,12 +62,15 @@ end disabled_CreateHelp
 -
 on menu_Help sObject
    launch_ObjectHelp sObject
+   if the result is empty then
+      _CreateHelp sObject
+   end if
 end menu_Help
 
-on menu_CreateHelp sObject
+on _CreateHelp sObject
    help_CreateFromObject sObject
    launch_ObjectHelp sObject
-end menu_CreateHelp
+end _CreateHelp
 
 on menu_UpdateHelp sObject
    help_UpdateFromObject sObject

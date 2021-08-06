@@ -8,7 +8,7 @@ type: controller
 version: 0.2
 
 
---> Menu | Init
+--> Menu | Props
 -
 local LocalArray
 
@@ -81,21 +81,31 @@ getprop disabled_HandlerHelp [hKey]
    end if
 end disabled_HandlerHelp
 
+getprop updateHelpGraph_Params [hKey]
+   put hkey_ListDotFiles (hKey) into shortFiles
+   -- put hkey_ListSvgFiles (hKey) into shortFiles
+   return shortFiles
+end updateHelpGraph_Params
+
 
 --> Global | Hkey | Help | Menu
 -
 on menu_HandlerHelp hKey
    launch_HkeyHelp hKey
    if the result is empty then
-      help_CreateFromHkey hKey
-      put the result into pageArray
-      if pageArray is not an array then
-         breakpoint
-      else
-         launch_HkeyHelp hKey
-      end if
+      _RecreateHelp hKey
    end if
 end menu_HandlerHelp
+
+on _RecreateHelp hKey
+   help_CreateFromHkey hKey
+   put the result into pageArray
+   if pageArray is not an array then
+      breakpoint
+   else
+      launch_HkeyHelp hKey
+   end if
+end _RecreateHelp
 
 on menu_MenuHandlerHelp hKey
    launch_MenuItemHelp hKey
@@ -131,7 +141,7 @@ on menu_TransporterHelp hKey
    launch url someURL
 end menu_TransporterHelp
 
-on menu_UpdateHelpGraph hKey
+on menu_UpdateHelpGraph hKey, shortFile
    switch
       case LocalArray ["isTransport"]
          put transport_FetchPageArray (hKey) into pageArray
@@ -139,12 +149,16 @@ on menu_UpdateHelpGraph hKey
          transport_StorePageArray hKey, pageArray
          break
       default
-         put lcw_FetchHandlerArray (hKey) into pageArray
+         set the itemdelimiter to "."
+         put item 1 of shortFile into graphStyle
+         put hkey_GetDotText (hKey, graphStyle) into dotText
          --
-         put hkey_GetDotText (hKey) into dotText
+         put lcw_FetchHandlerArray (hKey) into pageArray
          pageArray_ReplaceGraph pageArray, dotText
          --
          lcw_StoreHandlerArray hKey, pageArray
+         --
+         launch_HkeyHelp hKey
    end switch
 end menu_UpdateHelpGraph
 
@@ -152,10 +166,7 @@ on menu_UpdateMetadata hKey
    switch
       case hkey_IsMenuHandler (hKey)
          help_UpdateMenuItem hKey
-         if the result is empty then
-            -- create new
-            breakpoint
-         end if
+         launch_MenuItemHelp hKey
          break
       case hkey_IsTransportHandler (hKey)
          transport_UpdateHelp hKey
@@ -163,8 +174,8 @@ on menu_UpdateMetadata hKey
          launch url someURL
          break
       default
-         lcw_UpdateHandlerHelp hKey
-         launch_MenuItemHelp hKey, true
+         help_UpdateFromHkey hKey
+         launch_HkeyHelp hKey
    end switch
 end menu_UpdateMetadata
 
@@ -194,7 +205,7 @@ on _CreateMenuPage hKey
    --
    help_CreateMenu gMenuTitle
    --
-   help_LaunchMenu stackName
+   launch_HelpMenu stackName
 end _CreateMenuPage
 
 on _UpdateMenuPage hKey
@@ -203,22 +214,22 @@ on _UpdateMenuPage hKey
    --
    help_UpdateMenu gMenuTitle, "reference"
    --
-   help_LaunchMenu stackName
+   launch_HelpMenu stackName
 end _UpdateMenuPage
 
 on _
 end _
 
-on _CreateSubdomain hKey
+on _CreateMenuSubdomain hKey
    help_CreateMenuSubdomain hKey
    --
    launch_MenuItemHelp hKey
-end _CreateSubdomain
+end _CreateMenuSubdomain
 
-on _UpdateSubdomain hKey
+on _UpdateMenuSubdomain hKey
    help_UpdateMenuSubdomain hKey, "reference"
    --
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put the stack_Name of hObject into stackName
-   help_LaunchMenuSubdomain stackName
-end _UpdateSubdomain
+   launch_MenuSubdomain stackName
+end _UpdateMenuSubdomain
