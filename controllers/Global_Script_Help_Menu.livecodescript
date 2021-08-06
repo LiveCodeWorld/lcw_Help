@@ -67,10 +67,19 @@ on menu_Help sObject
    end if
 end menu_Help
 
-on _CreateHelp sObject
+on menu_CreateHelp sObject
+   put the name of sObject into oName
+   lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", sObject, oName
+   if the git_IsCommitted of oName is false then
+      ask_PushGithub oName
+   end if
+   --
    help_CreateFromObject sObject
    launch_ObjectHelp sObject
-end _CreateHelp
+end menu_CreateHelp
+
+on _
+end _
 
 on menu_UpdateHelp sObject
    help_UpdateFromObject sObject
@@ -92,17 +101,9 @@ on menu_ProjectHelp sObject
    end if
 end menu_ProjectHelp
 
-on _
-end _
-
 
 --> Dev | Menu
 -
-on _LaunchDomain sObject
-   put the script_Type of sObject into scriptType
-   put LocalArray ["helpURL"] & CR &  help_ConstructDomain (scriptType)
-end _LaunchDomain
-
 on _LaunchGoogleDig
    launch url "https://toolbox.googleapps.com/apps/dig/#A/"
 end _LaunchGoogleDig

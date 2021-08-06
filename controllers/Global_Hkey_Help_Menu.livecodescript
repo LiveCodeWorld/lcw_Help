@@ -105,8 +105,8 @@ end git_NeedsUpdating
 on _RecreateHelp hKey
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    put LocalArray ["tObject"] into tObject
-   lcw_Answer "Are you sure you wish to recreate the wiki help page for handler '[[hName]]'?", tObject, hName
-   breakpoint
+   lcw_Answer "Are you sure you wish to create the wiki help page for handler '[[hName]]'? This will overwrite any existing page.", tObject, hName
+   
    if the git_IsCommitted of hObject is false then
       -- if the git_IsClean of hObject is false then
       ask_PushGithub hObject
