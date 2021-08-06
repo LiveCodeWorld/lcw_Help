@@ -14,7 +14,38 @@ This library is for creating and displaying help for LCW menus in wiki.
 
 --> Working on
 -
+function help_ConstructMenuMarkdown mTitle, pMenuController
+   local pageArray
+   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
+   if exists (pMenuController) is false then return empty
+   
+   put the menu_Index [mTitle] of pMenuController into mHandlers
+   repeat for each line hName in mHandlers 
+      switch
+         case hName = "-"
+            put "- -" & CR after menuMarkDown
+            break
+         default
+            put menu_CommandToText (hName) into mText
+            put hkey_Construct (hName, "M", pMenuController) into hKey
+            --
+            put the github_Permalink [hKey] of pMenuController into handlerURL
+            get "-" && "- [" & handlerURL && mText & "]"
+            put it & CR after someMarkdown
+      end switch   
+   end repeat
+   delete char -1 of someMarkdown
+   --
+   put someMarkdown into pageStory [1]
+   return pageStory
+end help_ConstructMenuMarkdown
+
 function help_ConstructMenuStory mTitle, pHow, pMenuController
+   if pHow is not among the items of "handler,reference" then
+      put help_ConstructMenuMarkdown (mTitle, pMenuController) into storyArray
+      return storyArray
+   end if
+   
    local pageArray
    if pMenuController is empty then
       put menu_GetGlobalController (gMenuTitle) into pMenuController

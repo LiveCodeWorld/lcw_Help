@@ -69,7 +69,9 @@ end menu_Help
 
 on menu_CreateHelp sObject
    put the name of sObject into oName
-   lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", sObject, oName
+   put rev_ScriptEditorStack () into editorStack
+   --
+   lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", editorStack, oName
    if the git_IsCommitted of oName is false then
       ask_PushGithub oName
    end if
