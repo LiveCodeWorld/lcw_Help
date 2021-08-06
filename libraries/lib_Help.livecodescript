@@ -116,9 +116,16 @@ function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
    curly_MergePageArray pageArray, curlyData
    help_RenameTemplate pageArray, pageTitle, wikiDomain
    --
+   put curly_GetData (curlyData, "callList") into callList
+   if word 1 of callList is not "-" then
+      -- not a list
+      put pageArray_FindItemType ("graphviz", pageArray) into itemNum
+      pageArray_DeleteItem pageArray, itemNum
+   end if
+   --
    return pageArray
 end help_FetchNewPageArray
-  
+
 command help_RenameTemplate @pageArray, pageTitle, pWikiDomain
    put "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,fedwiki.org" into forkDomains
    --
@@ -425,16 +432,23 @@ private function _ConstructCallList someHandler, hKey
    -- we store them as we find them - because we can
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put the handler_PublicCalls [hKey] of hObject into shortPublicCalls
-   --
+   
+   # Extract calls from handler (and store them)
    put handler_ExtractCalls (someHandler) into shortCalls
    hkey_StoreCalls hKey, shortCalls
    -- put hkey_FetchCalls (hKey) into shortCalls
-   --
+   
+   # Construct list
    repeat for each line shortCall in shortPublicCalls
       put word 2 of shortCall & CR after callNames
    end repeat
    delete char -1 of callNames
    put fedwiki_MarkdownIndex (callNames) into callList
+   
+   # If empty
+   if callList is empty then
+      return "There are no calls for this handler."
+   end if
    return callList
 end _ConstructCallList
 

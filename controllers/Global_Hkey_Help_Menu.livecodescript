@@ -14,6 +14,7 @@ local LocalArray
 
 on _Init tObject
    -- assumes we are interacting with Script Editor list field
+   put tObject into LocalArray ["tObject"]
    
    put scriptEditor_GetHkey() into hKey
    put hKey into LocalArray ["hKey"]
@@ -97,7 +98,20 @@ on menu_HandlerHelp hKey
    end if
 end menu_HandlerHelp
 
+function git_NeedsUpdating sObject
+   put the git_IsActive of object
+end git_NeedsUpdating
+
 on _RecreateHelp hKey
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put LocalArray ["tObject"] into tObject
+   lcw_Answer "Are you sure you wish to recreate the wiki help page for handler '[[hName]]'?", tObject, hName
+   breakpoint
+   if the git_IsCommitted of hObject is false then
+      -- if the git_IsClean of hObject is false then
+      ask_PushGithub hObject
+   end if
+   --
    help_CreateFromHkey hKey
    put the result into pageArray
    if pageArray is not an array then
