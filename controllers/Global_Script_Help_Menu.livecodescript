@@ -57,13 +57,25 @@ switch
 end switch
 end disabled_CreateHelp
 
+getprop disabled_CreateMenuWiki [mController]
+   put _GetMenuWikiDomain (mController) into menuWikiDomain
+   put fedwiki_WikiExists (menuWikiDomain) into domainExists
+   return domainExists
+end disabled_CreateMenuWiki
+
+private function _GetMenuWikiDomain mController
+   put line 1 of the script_GlobalMenuTitles of mController into gMenuTitle
+   put help_ConstructMenuWikiDomain (gMenuTitle) into menuWikiDomain
+   return menuWikiDomain
+end _GetMenuWikiDomain
+
 
 --> Global | Script | Help | Menu
 -
 on menu_Help sObject
    launch_ObjectHelp sObject
    if the result is empty then
-      _CreateHelp sObject
+      menu_CreateHelp sObject
    end if
 end menu_Help
 
@@ -79,9 +91,6 @@ on menu_CreateHelp sObject
    help_CreateFromObject sObject
    launch_ObjectHelp sObject
 end menu_CreateHelp
-
-on _
-end _
 
 on menu_UpdateHelp sObject
    help_UpdateFromObject sObject
@@ -103,9 +112,82 @@ on menu_ProjectHelp sObject
    end if
 end menu_ProjectHelp
 
+on _
+end _
+
+on menu_AddMenuWikiDomain mController
+   put _GetMenuWikiDomain (mController) into menuWikiDomain
+   set the itemdelimiter to "."
+   put item 1 to -3 of menuWikiDomain into subDomain
+   --
+   digitalocean_CreateARecord "livecode.world", subDomain
+   put the result
+end menu_AddMenuWikiDomain
+
+on menu_CreateMenuWiki mController
+   put _GetMenuWikiDomain (mController) into menuWikiDomain
+   put "http://" & menuWikiDomain into wikiURL
+   --
+   launch url wikiURL
+end menu_CreateMenuWiki
+
+on menu_StoreMenuWiki mController
+   put line 1 of the script_GlobalMenuTitles of mController into gMenuTitle
+   put help_ConstructMenuWikiDomain (gMenuTitle) into menuWikiDomain
+   --  
+   # Fetch, rename and store menuPageArray
+   put help_FetchMenuWikiPageArray (gMenuTitle, mController, menuWikiDomain) into menuPageArray
+   pageArray_Store menuWikiDomain, "welcome-visitors", menuPageArray
+   --
+   menu_LaunchMenuWiki mController
+end menu_StoreMenuWiki
+
+on menu_LaunchMenuWiki mController
+   put the stack_Name of mController into stackName
+   launch_MenuWikiDomain stackName
+end menu_LaunchMenuWiki
+
+on menu_MenuHandlerHelp hKey
+   launch_MenuItemHelp hKey
+   if the result is empty then
+      help_CheckUpdateMenuItem hKey
+      help_CreateMenuItem hKey
+      launch_MenuItemHelp hKey
+   end if
+end menu_MenuHandlerHelp
+
 
 --> Dev | Menu
 -
+on _UpdateMenuWiki hKey
+   help_UpdateMenuSubdomain hKey, "reference"
+   --
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the stack_Name of hObject into stackName
+   launch_MenuWikiDomain stackName
+end _UpdateMenuWiki 
+
+on _CreateMenuPage hKey
+   put _StackName (hKey) into stackName
+   put help_ConstructMenuPageTitle (stackName) into gMenuTitle
+   --
+   help_CreateMenu gMenuTitle
+   --
+   launch_HelpMenu stackName
+end _CreateMenuPage
+
+on _UpdateMenuPage hKey
+   put _StackName (hKey) into stackName
+   put help_ConstructMenuPageTitle (stackName) into gMenuTitle
+   --
+   help_UpdateMenu gMenuTitle, "reference"
+   --
+   launch_HelpMenu stackName
+end _UpdateMenuPage
+
+on _
+end _
+
 on _LaunchGoogleDig
    launch url "https://toolbox.googleapps.com/apps/dig/#A/"
 end _LaunchGoogleDig

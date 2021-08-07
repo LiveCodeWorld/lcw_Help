@@ -98,10 +98,6 @@ on menu_HandlerHelp hKey
    end if
 end menu_HandlerHelp
 
-function git_NeedsUpdating sObject
-   put the git_IsActive of object
-end git_NeedsUpdating
-
 on _RecreateHelp hKey
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    -- put LocalArray ["tObject"] into tObject
@@ -123,30 +119,12 @@ on _RecreateHelp hKey
    end if
 end _RecreateHelp
 
-on menu_MenuHandlerHelp hKey
-   launch_MenuItemHelp hKey
-   if the result is empty then
-      help_CheckUpdateMenuItem hKey
-      help_CreateMenuItem hKey
-      launch_MenuItemHelp hKey
-   end if
-end menu_MenuHandlerHelp
-
-on menu_DisplayVersions hKey
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   put the result into shortHkey
-   --
-   put the github_Permalink [shortHkey] of hObject into webPermalink
-   --
-   launch url webPermalink
-end menu_DisplayVersions
+on _
+end _
 
 on menu_LaunchGithubUrl hKey
    launch_HkeyGitHub hKey
 end menu_LaunchGithubUrl
-
-on _
-end _
 
 on menu_TransporterHelp hKey
    put transport_HelpURL (hKey, true) into someURL
@@ -198,6 +176,16 @@ end menu_UpdateMetadata
 on _
 end _
 
+on menu_MenuHandlerHelp hKey
+   launch_MenuItemHelp hKey
+   if the result is empty then
+      breakpoint
+      help_CheckUpdateMenuItem hKey
+      help_CreateMenuItem hKey
+      launch_MenuItemHelp hKey
+   end if
+end menu_MenuHandlerHelp
+
 on submenu_Dev
    return "Dev | Menu"
 end submenu_Dev
@@ -205,6 +193,15 @@ end submenu_Dev
 
 --> Dev | Menu
 -
+on _DisplayVersions hKey
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   put the result into shortHkey
+   --
+   put the github_Permalink [shortHkey] of hObject into webPermalink
+   --
+   launch url webPermalink
+end _DisplayVersions
+
 on _TestRawPermalink hKey
    -- not working
    hkeyLine_Deconstruct hKey, hName, hType, hObject
@@ -214,38 +211,3 @@ on _TestRawPermalink hKey
    --
    launch url rawPermalink
 end _TestRawPermalink
-
-on _CreateMenuPage hKey
-   put _StackName (hKey) into stackName
-   put help_ConstructMenuPageTitle (stackName) into gMenuTitle
-   --
-   help_CreateMenu gMenuTitle
-   --
-   launch_HelpMenu stackName
-end _CreateMenuPage
-
-on _UpdateMenuPage hKey
-   put _StackName (hKey) into stackName
-   put help_ConstructMenuPageTitle (stackName) into gMenuTitle
-   --
-   help_UpdateMenu gMenuTitle, "reference"
-   --
-   launch_HelpMenu stackName
-end _UpdateMenuPage
-
-on _
-end _
-
-on _CreateMenuSubdomain hKey
-   help_CreateMenuSubdomain hKey
-   --
-   launch_MenuItemHelp hKey
-end _CreateMenuSubdomain
-
-on _UpdateMenuSubdomain hKey
-   help_UpdateMenuSubdomain hKey, "reference"
-   --
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the stack_Name of hObject into stackName
-   launch_MenuSubdomain stackName
-end _UpdateMenuSubdomain

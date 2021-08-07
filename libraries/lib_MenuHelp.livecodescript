@@ -12,125 +12,6 @@ This library is for creating and displaying help for LCW menus in wiki.
 */
 
 
---> Working on
--
-function help_ConstructMenuMarkdown mTitle, pMenuController
-   local pageArray
-   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
-   if exists (pMenuController) is false then return empty
-   
-   put the menu_Index [mTitle] of pMenuController into mHandlers
-   repeat for each line hName in mHandlers 
-      switch
-         case hName = "-"
-            put "- -" & CR after menuMarkDown
-            break
-         default
-            put menu_CommandToText (hName) into mText
-            put hkey_Construct (hName, "M", pMenuController) into hKey
-            --
-            put the github_Permalink [hKey] of pMenuController into handlerURL
-            get "-" && "- [" & handlerURL && mText & "]"
-            put it & CR after someMarkdown
-      end switch   
-   end repeat
-   delete char -1 of someMarkdown
-   --
-   put someMarkdown into pageStory [1]
-   return pageStory
-end help_ConstructMenuMarkdown
-
-function help_ConstructMenuStory mTitle, pHow, pMenuController
-   if pHow is not among the items of "handler,reference" then
-      put help_ConstructMenuMarkdown (mTitle, pMenuController) into storyArray
-      return storyArray
-   end if
-   
-   local pageArray
-   if pMenuController is empty then
-      put menu_GetGlobalController (gMenuTitle) into pMenuController
-   end if
-   if exists (pMenuController) is false then return empty
-   
-   put the menu_Index [mTitle] of pMenuController into mHandlers
-   repeat for each line hName in mHandlers 
-      switch
-         case hName = "-"
-            pageArray_AddPagefold pageArray, "."
-            break
-         case pHow is "handler"
-            put fedwiki_ConstructSlug (hName) into pageSlug
-            put menu_CommandToText (hName) into mText
-            --
-            pageArray_AddReference pageArray, pageSlug, "handler.livecode.world", mText, hName
-            break
-         case pHow is "reference"
-            put menu_CommandToText (hName) into mText
-            put fedwiki_ConstructSlug (mText) into pageSlug  
-            put help_ConstructMenuSubDomain (mTitle) into menuSubDomain
-            --
-            pageArray_AddReference pageArray, pageSlug, menuSubDomain, hName, mText
-            break
-         default
-            put menu_CommandToText (hName) into mText
-            put hkey_Construct (hName, "M", pMenuController) into hKey
-            put the github_HandlerURL [hKey] of pMenuController into handlerURL
-            put "-" && mText && "- [" & handlerURL && "github]" into someMarkdown
-            --
-            pageArray_AddMarkdown pageArray, someMarkdown
-      end switch   
-   end repeat
-   return pageArray ["story"]
-end help_ConstructMenuStory
-
-
---> Help | Menu | Create
--
-command help_CreateMenu gMenuTitle, pMenuController
-   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
-   --
-   put help_CreateMenuPageArray (gMenuTitle, pMenuController, "links") into pageArray
-   if pageArray is empty then return empty
-   help_MenuMergeAndStore pMenuController, pageArray
-   --
-   return the result
-end help_CreateMenu
-
-function help_CreateMenuPageArray gMenuTitle, mController, pHow
-   put menu_StripGlobal (gMenuTitle) into pageTitle
-   
-   # Fetch template
-   put pageArray_Fetch ("menu.livecode.world", "menu-template") into pageArray
-   
-   # Add forks, rename and tidy
-   help_RenameTemplate pageArray, pageTitle, wikiDomain
-   
-   # Replace Menu section
-   put help_ConstructMenuStory (gMenuTitle, pHow, mController) into storyArray
-   pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
-   --
-   return pageArray
-end help_CreateMenuPageArray
-
-private command help_MenuMergeAndStore mController, pageArray
-   put pageArray ["title"] into pageTitle -- could get from stackName ?
-   --
-   put help_ConstructDomain ("menu") into wikiDomain
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   --
-   put help_ObjectCurlyData (mController, "menu") into curlyData
-   curly_MergePageArray pageArray, curlyData
-   --
-   pageArray_Store wikiDomain, pageSlug, pageArray
-   put the result into shellResult
-   if shellResult is empty then
-      return pageArray
-   else
-      return shellResult
-   end if
-end help_MenuMergeAndStore
-
-
 --> Help | Launch
 -
 command launch_HelpMenu stackName
@@ -183,16 +64,191 @@ command launch_ProjectHelp projectName
    return someURL
 end launch_ProjectHelp
 
-command launch_MenuSubdomain stackName
+command launch_MenuWikiDomain stackName
    put help_ConstructMenuPageTitle (stackName) into pageTitle
-   put help_MenuSubDomain (pageTitle) into menuSubDomain
+   put help_MenuWikiDomain (pageTitle) into menuSubDomain
    --
    put fedwiki_ConstructUrlFromSlug (menuSubDomain) into someURL
    if someURL is empty then return empty
    --
    launch url someURL
    return someURL
-end launch_MenuSubdomain
+end launch_MenuWikiDomain
+
+
+--> Working on
+-
+function help_ConstructMenuMarkdown mTitle, pMenuController
+   local pageArray
+   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
+   if exists (pMenuController) is false then return empty
+   
+   put the filename of pMenuController into sFile
+   put git_GetCommitFileHash (sFile, 1) into commitHash
+   git_SetRelative sFile, relativePath, checkoutFolder
+   --
+   put "LiveCodeWorld" into repoBit
+   set the itemdelimiter to slash
+   put item -1 of checkoutFolder into item 2 of repoBit
+   set the itemdelimiter to comma
+   --
+   put "# Menu" & CR&CR into someMarkdown
+   put the menu_Index [mTitle] of pMenuController into mHandlers
+   repeat for each line hName in mHandlers
+      set the cursor to busy
+      switch
+         case hName = "-"
+            put "- -" & CR after someMarkdown
+            break
+         default
+            put menu_CommandToText (hName) into mText
+            put hkey_Construct (hName, "M", pMenuController) into hKey
+            --
+            -- put the github_Permalink [hKey] of pMenuController into webPermalink
+            --
+            hkeyLine_Offsets pMenuController, hKey, sLineNum, eLineNum
+            put github_ConstructPermalink (commitHash, repoBit, relativePath, sLineNum, eLineNum) into webPermalink
+            
+            get "-" && "- [" & webPermalink && mText & "]"
+            put it & CR after someMarkdown
+      end switch   
+   end repeat
+   delete char -1 of someMarkdown
+   --
+   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
+   return storyArray
+end help_ConstructMenuMarkdown
+
+function help_ConstructMenuStory mTitle, pHow, pMenuController
+   if pHow is not among the items of "handler,reference" then
+      put help_ConstructMenuMarkdown (mTitle, pMenuController) into storyArray
+      return storyArray
+   end if
+   
+   local pageArray
+   if pMenuController is empty then
+      put menu_GetGlobalController (gMenuTitle) into pMenuController
+   end if
+   if exists (pMenuController) is false then return empty
+   
+   put the menu_Index [mTitle] of pMenuController into mHandlers
+   repeat for each line hName in mHandlers 
+      switch
+         case hName = "-"
+            pageArray_AddPagefold pageArray, "."
+            break
+         case pHow is "handler"
+            put fedwiki_ConstructSlug (hName) into pageSlug
+            put menu_CommandToText (hName) into mText
+            --
+            pageArray_AddReference pageArray, pageSlug, "handler.livecode.world", mText, hName
+            break
+         case pHow is "reference"
+            put menu_CommandToText (hName) into mText
+            put fedwiki_ConstructSlug (mText) into pageSlug  
+            put help_ConstructMenuWikiDomain (mTitle) into menuSubDomain
+            --
+            pageArray_AddReference pageArray, pageSlug, menuSubDomain, hName, mText
+            break
+         default
+            put menu_CommandToText (hName) into mText
+            put hkey_Construct (hName, "M", pMenuController) into hKey
+            put the github_HandlerURL [hKey] of pMenuController into handlerURL
+            put "-" && mText && "- [" & handlerURL && "github]" into someMarkdown
+            --
+            pageArray_AddMarkdown pageArray, someMarkdown
+      end switch   
+   end repeat
+   return pageArray ["story"]
+end help_ConstructMenuStory
+
+
+--> Help | Menu | Wiki
+-
+function help_FetchMenuWikiPageArray gMenuTitle, mController, pWikiDomain
+   put help_ConstructMenuStory (gMenuTitle, "reference", mController) into storyArray
+   --
+   put help_ConstructMenuPageTitle (gMenuTitle) into menuPageTitle
+   put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
+   put pageArray_Fetch ("menu.livecode.world", menuPageSlug) into menuPageArray
+   if menuPageArray is empty then return merge ("Error, there is no page [[menuPageSlug]] on menu.livecode.world to clone")
+   --
+   pageArray_ReplaceSectionBody menuPageArray, "Menu", storyArray
+   --
+   # Add forks, rename and tidy
+   help_RenameTemplate menuPageArray, "Welcome Visitors", pWikiDomain
+   /*
+   pageArray_Rename menuPageArray, "Welcome Visitors"
+   pageArray_StripJournal menuPageArray
+   pageArray_AddFork menuPageArray, "handler.livecode.world,model.livecode.world,fedwiki.org"
+   */
+   --
+   return menuPageArray
+end help_FetchMenuWikiPageArray
+
+function help_ConstructMenuWikiDomain gMenuTitle
+   put menu_StripGlobal (gMenuTitle) into pageTitle
+   put help_MenuWikiDomain (pageTitle) into menuSubDomain
+   return menuSubDomain
+end help_ConstructMenuWikiDomain
+
+function help_MenuWikiDomain pageTitle
+   set the itemdelimiter to "|"
+   put the number of items of pageTitle - 1 into maxNum
+   repeat with itemNum = maxNum down to 1
+      put word 1 to -1 of item itemNum of pageTitle into dBit
+      put tolower (dBit) & "." after firstBit
+   end repeat
+   put firstBit & "menu.livecode.world" into menuSubDomain
+   return menuSubDomain
+end help_MenuWikiDomain
+
+
+--> Help | Menu | Create
+-
+command help_CreateMenu gMenuTitle, pMenuController
+   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
+   --
+   put help_CreateMenuPageArray (gMenuTitle, pMenuController, "links") into pageArray
+   if pageArray is empty then return empty
+   help_MenuMergeAndStore pMenuController, pageArray
+   --
+   return the result
+end help_CreateMenu
+
+function help_CreateMenuPageArray gMenuTitle, mController, pHow
+   put menu_StripGlobal (gMenuTitle) into pageTitle
+   
+   # Fetch template
+   put pageArray_Fetch ("menu.livecode.world", "menu-template") into pageArray
+   
+   # Add forks, rename and tidy
+   help_RenameTemplate pageArray, pageTitle, wikiDomain
+   
+   # Replace Menu section
+   put help_ConstructMenuStory (gMenuTitle, pHow, mController) into storyArray
+   pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
+   --
+   return pageArray
+end help_CreateMenuPageArray
+
+private command help_MenuMergeAndStore mController, pageArray
+   put pageArray ["title"] into pageTitle -- could get from stackName ?
+   --
+   put help_ConstructDomain ("menu") into wikiDomain
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   --
+   put help_ObjectCurlyData (mController, "menu") into curlyData
+   curly_MergePageArray pageArray, curlyData
+   --
+   pageArray_Store wikiDomain, pageSlug, pageArray
+   put the result into shellResult
+   if shellResult is empty then
+      return pageArray
+   else
+      return shellResult
+   end if
+end help_MenuMergeAndStore
 
 
 --> Help | Construct
@@ -207,15 +263,18 @@ function help_ConstructHkeyURL hKey, pCheckURL
 end help_ConstructHkeyURL
 
 function help_ConstructMenuItemUrl hKey, pCheckURL
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the stack_Name of hObject into stackName
+   hkeyLine_Deconstruct hKey, hName, hType, mController
+   put the stack_Name of mController into gMenuTitle
    --
-   put help_ConstructMenuPageTitle (stackName) into pageTitle
-   put help_MenuSubDomain (pageTitle) into menuSubDomain
+   get help_ConstructMenuPageTitle (gMenuTitle)
+   put help_MenuWikiDomain (it) into menuSubDomain
    --
+   put menu_CommandToText (hName) into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    put fedwiki_ConstructUrlFromSlug (menuSubDomain, pageSlug) into helpURL
-   if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
+   --
+   put fedwiki_PageExists (menuSubDomain, pageSlug) into pageExists
+   if pCheckURL is true and pageExists is false then return empty
    --
    return helpURL
 end help_ConstructMenuItemUrl
@@ -228,26 +287,6 @@ function help_ConstructMenuPageTitle gMenuTitle
    put menu_StripGlobal (gMenuTitle) into pageTitle
    return word 1 to -1 of pageTitle
 end help_ConstructMenuPageTitle
-
-
---> Help | Menu | Info
--
-function help_ConstructMenuSubDomain gMenuTitle
-   put menu_StripGlobal (gMenuTitle) into pageTitle
-   put help_MenuSubDomain (pageTitle) into menuSubDomain
-   return menuSubDomain
-end help_ConstructMenuSubDomain
-
-function help_MenuSubDomain pageTitle
-   set the itemdelimiter to "|"
-   put the number of items of pageTitle - 1 into maxNum
-   repeat with itemNum = maxNum down to 1
-      put word 1 to -1 of item itemNum of pageTitle into dBit
-      put tolower (dBit) & "." after firstBit
-   end repeat
-   put firstBit & "menu.livecode.world" into menuSubDomain
-   return menuSubDomain
-end help_MenuSubDomain
 
 
 --> Help
@@ -451,7 +490,7 @@ private command _SetMenuItemHelpInfo hKey, @gMenuTitle, @hkeyPageTitle, @menuSub
    --
    set the itemdelimiter to "|"
    if word 1 to -1 of item 1 of gMenuTitle = "Global" then
-      put help_ConstructMenuSubDomain (gMenuTitle) into menuSubDomain
+      put help_ConstructMenuWikiDomain (gMenuTitle) into menuSubDomain
       return hObject
    else
       -- could be a local menu such as "Dev | Menu" of a global menu
@@ -464,7 +503,7 @@ private command _SetMenuItemHelpInfo hKey, @gMenuTitle, @hkeyPageTitle, @menuSub
       --
       set the wholematches to true
       if gMenuTitle is among the lines of mTitles then
-         put help_ConstructMenuSubDomain (gMenuTitle) into menuSubDomain
+         put help_ConstructMenuWikiDomain (gMenuTitle) into menuSubDomain
          return hObject
       else
          breakpoint
