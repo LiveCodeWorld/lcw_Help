@@ -56,7 +56,7 @@ command help_CreateFromObject sObject
          put line 1 of the script_GlobalMenuTitles of sObject into gMenuTitle -- just in case
          if stackName is not gMenuTitle then breakpoint -- stackName should be gMenuTitle
          --
-         help_CreateMenu gMenuTitle
+         help_CreateMenuPage gMenuTitle
          break
       case "transport"
       default
@@ -183,9 +183,9 @@ function help_ConstructDomain scriptType
    return wikiDomain
 end help_ConstructDomain
 
-function help_ConstructMenuUrl stackName, pCheckURL
+function help_ConstructMenuUrl gMenuTitle, pCheckURL
    put help_ConstructDomain ("menu") into wikiDomain
-   put help_ConstructMenuPageTitle (stackName) into menuPageTitle
+   put help_ConstructMenuPageTitle (gMenuTitle) into menuPageTitle
    put fedwiki_ConstructSlug (menuPageTitle) into pageSlug
    
    # Return emmpty if page does not exist
