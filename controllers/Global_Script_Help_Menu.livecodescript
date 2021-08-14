@@ -48,7 +48,7 @@ switch
 end switch
 end disabled_Help
 
--- getprop disabled_CreateHelp
+-- getprop disabled_RecreateHelp
 if the shiftKey is "Down" then return false
 switch
    case LocalArray ["helpURL"] is not empty
@@ -57,16 +57,7 @@ switch
    default
       return false
 end switch
-end disabled_CreateHelp
-
--- on menu_MenuHandlerHelp mController
-launch_MenuItemHelp hKey
-if the result is empty then
-   help_CheckUpdateMenuItem hKey
-   help_CreateMenuItem hKey
-   launch_MenuItemHelp hKey
-end if
-end menu_MenuHandlerHelp
+end disabled_RecreateHelp
 
 
 --> Global | Script | Help | Menu
@@ -74,30 +65,19 @@ end menu_MenuHandlerHelp
 on menu_Help sObject
    launch_ObjectHelp sObject
    if the result is empty then
-      _CreateHelp sObject
+      menu_RecreateHelp sObject
    end if
 end menu_Help
 
 on menu_ProjectHelp sObject
    put the project_Name of sObject into projectName
-   launch_ProjectHelp projectName
-   --
-   if the result is empty then
-      if exists (stack projectName) is false then
-         lcw_AnswerWarning "Cannot locate project home stack '[[projectName]]", projectName
-      end if
-      
-      put the name of stack projectName into homeStackObject
-      help_CreateFromObject homeStackObject
-      --
-      launch_ProjectHelp projectName
-   end if
+   launch_OrCreateProject projectName
 end menu_ProjectHelp
 
 on _
 end _
 
-on _CreateHelp sObject
+on menu_RecreateHelp sObject
    put the name of sObject into oName
    put rev_ScriptEditorStack () into editorStack
    lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", editorStack, oName
@@ -105,7 +85,7 @@ on _CreateHelp sObject
    if the git_IsCommitted of sObject is false then ask_PushGithub sObject
    help_CreateFromObject sObject
    launch_ObjectHelp sObject
-end _CreateHelp
+end menu_RecreateHelp
 
 on _UpdateHelp sObject
    help_UpdateFromObject sObject

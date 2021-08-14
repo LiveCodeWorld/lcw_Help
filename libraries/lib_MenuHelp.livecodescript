@@ -12,6 +12,54 @@ This library is for creating and displaying help for LCW menus in wiki.
 */
 
 
+--> Props
+-
+getprop menu_PermalinkMarkdown [pFast]
+   -- pFast can be true, false, or gMenutitle
+   put the long id of the target into mController
+   put the menu_Handlers [pFast] of mController into hNames
+   
+   # Construct markdown
+   _SetCommitStuff mController, sFile, checkoutFolder, relativePath, commitHash, repoBit
+   repeat for each line hName in hNames
+      set the cursor to busy
+      switch
+         case hName = "_"
+            put "- -" & CR after someMarkdown
+            break
+         default
+            put menu_CommandToText (hName) into mText
+            put _Markdownline (hName, mController, commitHash, repoBit, relativePath, mText) & CR after someMarkdown
+      end switch   
+   end repeat
+   delete char -1 of someMarkdown
+   return someMarkdown
+end menu_PermalinkMarkdown
+
+getprop handler_PermalinkMarkdown [pNotPrivate]
+   put the long id of the target into hObject
+   
+   # Collect handler names
+   put the script_HandlerNames [pNotPrivate] of hObject into hNames
+   
+   # Construct markdown
+   _SetCommitStuff hObject, sFile, checkoutFolder, relativePath, commitHash, repoBit
+   repeat for each line hName in hNames
+      set the cursor to busy
+      switch
+         case hName = "_"
+            put "- -" & CR after someMarkdown
+            break
+         default
+            put menu_CommandToText (hName) into pText
+            put _Markdownline (hName, hObject, commitHash, repoBit, relativePath) & CR after someMarkdown
+      end switch   
+   end repeat
+   delete char -1 of someMarkdown
+   return someMarkdown
+end handler_PermalinkMarkdown
+
+
 --> Help | Launch
 -
 command launch_MenuHelp gMenuTitle
@@ -29,6 +77,21 @@ command launch_ObjectHelp tObject
    launch url helpURL
    return helpURL
 end launch_ObjectHelp
+
+command launch_OrCreateProject projectName
+   launch_ProjectHelp projectName
+   --
+   if the result is empty then
+      if exists (stack projectName) is false then
+         lcw_AnswerWarning "Cannot locate project home stack '[[projectName]]", projectName
+      end if
+      
+      put the name of stack projectName into homeStackObject
+      help_CreateFromObject homeStackObject
+      --
+      launch_ProjectHelp projectName
+   end if
+end launch_OrCreateProject
 
 command launch_ProjectHelp projectName
    put the help_Url [true] of stack projectName into someURL
@@ -52,60 +115,45 @@ end launch_MenuWikiDomain
 
 --> Working on
 -
-function help_ConstructMenuMarkdown mTitle, pMenuController
-   local pageArray
-   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
-   if exists (pMenuController) is false then return empty
-   
-   put the filename of pMenuController into sFile
-   put git_GetCommitFileHash (sFile, 1) into commitHash
-   git_SetRelative sFile, relativePath, checkoutFolder
-   --
-   put "LiveCodeWorld" into repoBit
-   set the itemdelimiter to slash
-   put item -1 of checkoutFolder into item 2 of repoBit
-   set the itemdelimiter to comma
-   --
-   put "# Menu" & CR&CR into someMarkdown
-   put the menu_Index [mTitle] of pMenuController into mHandlers
-   repeat for each line hName in mHandlers
-      set the cursor to busy
-      switch
-         case hName = "-"
-            put "- -" & CR after someMarkdown
-            break
-         default
-            put menu_CommandToText (hName) into mText
-            put hkey_Construct (hName, "M", pMenuController) into hKey
-            --
-            -- put the github_Permalink [hKey] of pMenuController into webPermalink
-            --
-            hkeyLine_Offsets pMenuController, hKey, sLineNum, eLineNum
-            put github_ConstructPermalink (commitHash, repoBit, relativePath, sLineNum, eLineNum) into webPermalink
-            
-            get "-" && "- [" & webPermalink && mText & "]"
-            put it & CR after someMarkdown
-      end switch   
-   end repeat
-   delete char -1 of someMarkdown
-   --
-   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
-   return storyArray
-end help_ConstructMenuMarkdown
-
 function help_ConstructMenuStory mTitle, pHow, pMenuController
+   # Markdown to Github permalinks version
    if pHow is not among the items of "handler,reference" then
-      put help_ConstructMenuMarkdown (mTitle, pMenuController) into storyArray
+      put help_ConstructHandlerStoryMD (mTitle, pMenuController) into storyArray
       return storyArray
    end if
    
-   local pageArray
+   # Find the mController
    if pMenuController is empty then
       put menu_GetGlobalController (gMenuTitle) into pMenuController
    end if
    if exists (pMenuController) is false then return empty
    
-   put the menu_Index [mTitle] of pMenuController into mHandlers
+   put the menu_Handlers [mTitle] of pMenuController into mHandlers
+   put help_ConstructHandlerStory (mHandlers, pHandlerObject) into pageArray
+   
+   return pageArray ["story"]
+end help_ConstructMenuStory
+
+function help_ConstructHandlerStoryMD gMenuTitle, pMenuController
+   put help_ConstructMenuMarkdown (gMenuTitle, pMenuController) into someMarkdown
+   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
+   return storyArray
+end help_ConstructHandlerStoryMD
+
+function help_ConstructMenuMarkdown gMenuTitle, pMenuController
+   local pageArray
+   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
+   if exists (pMenuController) is false then return empty
+   
+   # Construct markdown  
+   put the handler_PermalinkMarkdown [gMenuTitle] of pMenuController into someMarkdown
+   put "# Menu" & CR&CR before someMarkdown
+   --
+   return someMarkdown
+end help_ConstructMenuMarkdown
+
+function help_ConstructHandlerStory mHandlers, pHandlerObject
+   local pageArray
    repeat for each line hName in mHandlers 
       switch
          case hName = "-"
@@ -126,15 +174,16 @@ function help_ConstructMenuStory mTitle, pHow, pMenuController
             break
          default
             put menu_CommandToText (hName) into mText
-            put hkey_Construct (hName, "M", pMenuController) into hKey
-            put the github_HandlerURL [hKey] of pMenuController into handlerURL
+            put hkey_Construct (hName, "M", pHandlerObject) into hKey
+            --
+            put the github_HandlerURL [hKey] of pHandlerObject into handlerURL
             put "-" && mText && "- [" & handlerURL && "github]" into someMarkdown
             --
             pageArray_AddMarkdown pageArray, someMarkdown
       end switch   
    end repeat
-   return pageArray ["story"]
-end help_ConstructMenuStory
+   return pageArray
+end help_ConstructHandlerStory
 
 
 --> Help | Menu | Wiki
@@ -220,13 +269,15 @@ private command help_MenuMergeAndStore mController, pageArray
    --
    put help_ObjectCurlyData (mController, "menu") into curlyData
    curly_MergePageArray pageArray, curlyData
-   --
+   
+   # Store
+   -- help_CreatePageArray pageArray, "menu"
    pageArray_Store wikiDomain, pageSlug, pageArray
-   put the result into shellResult
-   if shellResult is empty then
-      return pageArray
-   else
+   put the result into shellResult -- url
+   if item 1 of shellResult is "Error" then
       return shellResult
+   else
+      return pageArray
    end if
 end help_MenuMergeAndStore
 
@@ -292,6 +343,27 @@ end help_CheckMenu
 
 --> Private
 -
+private command _SetCommitStuff hObject, @sFile, @checkoutFolder, @relativePath, @commitHash, @repoBit
+   put the filename of hObject into sFile
+   put git_GetCommitFileHash (sFile, 1) into commitHash
+   git_SetRelative sFile, relativePath, checkoutFolder
+   --
+   put "LiveCodeWorld" into repoBit
+   set the itemdelimiter to slash
+   put item -1 of checkoutFolder into item 2 of repoBit
+   set the itemdelimiter to comma
+end _SetCommitStuff
+
+private function _Markdownline hName, hObject, commitHash, repoBit, relativePath, pText
+   if pText is empty then put hName into pText
+   --
+   put hkey_Construct (hName, "M", hObject) into hKey
+   hkeyLine_Offsets hObject, hKey, sLineNum, eLineNum
+   put github_ConstructPermalink (commitHash, repoBit, relativePath, sLineNum, eLineNum) into webPermalink
+   get "-" && "- [" & webPermalink && pText & "]"
+   return it
+end _Markdownline
+
 private command help_MenuItemMergeAndStore hKey, menuSubDomain, pageArray, pUpdate
    put pageArray ["title"] into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug

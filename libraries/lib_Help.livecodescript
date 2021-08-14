@@ -13,6 +13,91 @@ lcw_Help uses the livecode.world federated wiki to store it's help.
 As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 */
 
+--> Working on
+-
+function pageArray_Check pageArray
+   -- quick hack
+   switch
+      case "title" is not among the keys of pageArray
+      case "story" is not among the keys of pageArray
+      case "journal" is not among the keys of pageArray
+         return false
+      default
+         return true
+   end switch
+end pageArray_Check
+
+private command _AddObjectCurlyData @curlyData, scriptType, sObject
+   put the stack_Name of sObject into stackName
+   put the project_Name of sObject into projectName 
+   put scriptType into curlyData ["scriptType"]
+   put projectName into curlyData ["projectName"]
+   --
+   switch scriptType
+      case "menu"
+      case "controller"
+         -- put the script_Metadata ["name"] of sObject into stackName
+         put stackName into menuTitle
+         put the menu_Handlers [menuTitle] of sObject into mHandlers
+         put mHandlers into curlyData ["all"]["Menu Handler Index"]
+         -- put fedwiki_MarkdownIndex (mHandlers) into curlyData ["id"]["abb62f579a1d7288"]
+         --
+         put help_ConstructMenuPageTitle (stackName) into pageTitle
+         put pageTitle into curlyData ["title"]
+         --
+         return pageTitle
+      case "ide"         
+         put the script_MarkdownHandlerindex of sObject into curlyData ["all"]["Handler List"]
+         put relFolder into curlyData ["all"]["rel folder"]
+         put shortFile into curlyData ["all"]["short file"]
+         put stackName into curlyData ["title"]
+         break
+      case "home"
+      case "project"
+         put the project_Deps of sObject into projectDeps
+         put fedwiki_MarkdownIndex (projectDeps) into markdownIndex
+         put markdownIndex into curlyData ["all"]["Project Dep List"]
+         --
+         put project_GetStackNameArray (projectName) into stackNameArray
+         repeat for each item shortFolder in "Libraries,Models,Controllers,Modules,Views"
+            put stackNameArray [shortFolder] into sArray
+            put the keys of sArray into someIndex
+            if someIndex is empty then next repeat
+            
+            put "#" && shortFolder & CR&CR after pMarkdown
+            sort someIndex
+            put fedwiki_MarkdownIndex (someIndex) & CR&CR after pMarkdown
+         end repeat
+         delete char -1 of pMarkdown
+         put pMarkdown into curlyData ["all"]["Project Components"]
+         put stackName into curlyData ["title"]
+         break
+      case "transport"
+      case "library"
+      default
+         -- put "8869c0772777be8e" into githubLinkID
+         --put the script_MarkdownHandlerindex of tObject into curlyData ["all"]["Handler List"]
+         -- put the script_Deps of tObject into curlyData ["all"]["Stack Deps"]
+         
+         put help_ConstructDomain (scriptType) into wikiDomain
+         put help_ConstructTitle (stackName, scriptType) into pageTitle 
+         put pageTitle into curlyData ["title"]
+   end switch
+   
+   return stackName
+end _AddObjectCurlyData
+
+function help_GetHkeyTags hKey
+   put lcw_FetchPageData (hKey) into pageData
+   put pageData_GetText (pageData, "handlerTags") into handlerTags
+   replace "[[" with empty in handlerTags
+   replace "]]" with empty in handlerTags
+   replace "-" with empty in handlerTags
+   replace space with empty in handlerTags
+   return handlerTags
+end help_GetHkeyTags
+
+
 --> Props
 -
 getprop help_Url [pCheckURL]
@@ -42,23 +127,61 @@ getprop script_MarkdownHandlerIndex
 end script_MarkdownHandlerindex
 
 
---> Working on
+--> Help | Template | Model
 -
+function help_FetchTemplateArray scriptType, pStripJournal
+   -- see also "federation_FetchTemplatePageArray"
+   put help_FetchTemplateJson (scriptType) into templateJSON
+   put json_ToArray (templateJSON) into templateArray
+   if pStripJournal is true then
+      pageArray_StripJournal templateArray
+   end if
+   return templateArray
+end help_FetchTemplateArray
+
+function help_FetchTemplateJson scriptType
+   put help_ConstructDomain (scriptType) into fedwikiDomain
+   _FixScriptTyle scriptType
+   put scriptType & "-" & "template" into pageSlug
+   put pageJson_Fetch (fedwikiDomain, pageSlug) into pageJSON
+   return pageJSON
+end help_FetchTemplateJson
+
+function help_ConstructDomain scriptType
+   _FixScriptTyle scriptType
+   put scriptType & ".livecode.world" into wikiDomain
+   return wikiDomain
+end help_ConstructDomain
+
+command _FixScriptTyle @scriptType
+   switch scriptType
+      case "home"
+         put "project" into scriptType
+         break
+      case "controller"
+         put "menu" into scriptType
+         break
+   end switch
+end _FixScriptTyle
+
 
 --> Help | Create
 -
 command help_CreateFromObject sObject
-   put the stack_Name of sObject into stackName
    put the script_Type of sObject into scriptType
    switch scriptType
       case "controller"
       case "menu"
          put line 1 of the script_GlobalMenuTitles of sObject into gMenuTitle -- just in case
+         --
+         put the stack_Name of sObject into stackName
          if stackName is not gMenuTitle then breakpoint -- stackName should be gMenuTitle
          --
          help_CreateMenuPage gMenuTitle
          break
       case "transport"
+         help_CreateTransportPage sObject
+         break
       default
          put the script_MetaData ["script_Help"] of sObject into pScriptHelp
          put help_ObjectCurlyData (sObject, scriptType) into curlyData
@@ -68,7 +191,7 @@ command help_CreateFromObject sObject
          put the result into shellResult
          return shellResult
    end switch
-end help_CreateFromObject
+end help_CreateFromObject 
 
 command help_CreateFromHkey hKey, pScriptHelp
    put hkey_IsMenuHandler (hKey) into isMenuHandler
@@ -90,13 +213,29 @@ command help_CreateFromHkey hKey, pScriptHelp
 end help_CreateFromHkey
 
 command help_Create pageTitle, scriptType, curlyData, pScriptHelp
-   put help_ConstructDomain (scriptType) into helpDomain
+   # Construct
    put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
-   if pageArray is empty then
-      return merge ("Error, cannot find template on '[[wikiDomain]]' for '[[scriptType]]'")
+   
+   # Check
+   if pageArray_Check (pageArray) is false then
+      put help_ConstructDomain (scriptType) into helpDomain
+      return merge ("Error, could not fetch template for '[[scriptType]]' at '[[helpDomain]]'")
    end if
+   
+   help_CreatePageArray pageArray, scriptType
+   return the result
+end help_Create
+
+command help_CreatePageArray pageArray, scriptType
+   # Check pageArray
+   if pageArray_Check (pageArray) is false then return "Error, not storing. Faulty pageArray"
+   
+   # Work out domain and slug
+   put help_ConstructDomain (scriptType) into helpDomain
+   put pageArray ["title"] into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   --
+   
+   # Store
    pageArray_Store helpDomain, pageSlug, pageArray
    put the result into shellResult
    if item 1 of shellResult is "error" then
@@ -104,7 +243,33 @@ command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    else
       return pageArray
    end if
-end help_Create
+end help_CreatePageArray
+
+command help_CreateTransportPage sObject, pageTitle, pScriptHelp
+   put "transport" into scriptType
+   --
+   put help_ObjectCurlyData (sObject, scriptType) into curlyData
+   put the stack_Name of sObject into stackName
+   put help_ConstructTitle (stackName, scriptType) into pageTitle
+   put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
+   
+   # Check
+   if pageArray_Check (pageArray) is false then
+      put help_ConstructDomain ("transport") into helpDomain
+      return merge ("Error, could not fetch template for '[[scriptType]]' at '[[helpDomain]]'")
+   end if
+   
+   # Get script markdown
+   put the handler_PermalinkMarkdown [true] of tObject into someMarkdown
+   
+   # Replace "Routes section
+   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
+   pageArray_ReplaceSectionBody pageArray, "Routes", storyArray
+   
+   # Store 
+   help_CreatePageArray pageArray, scriptType
+   return the result
+end help_CreateTransportPage
 
 function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
    put help_ConstructDomain (scriptType) into wikiDomain
@@ -113,15 +278,19 @@ function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
    if pageArray_Check (pageArray) is false then return empty
    if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
    --
-   curly_MergePageArray pageArray, curlyData
    help_RenameTemplate pageArray, pageTitle, wikiDomain
    --
-   put curly_GetData (curlyData, "callList") into callList
-   if word 1 of callList is not "-" then
-      -- not a list
-      put pageArray_FindItemType ("graphviz", pageArray) into itemNum
-      pageArray_DeleteItem pageArray, itemNum
-   end if
+   switch scriptType
+      case "transport"
+      default
+         curly_MergePageArray pageArray, curlyData
+         put curly_GetData (curlyData, "callList") into callList
+         if word 1 of callList is not "-" then
+            -- not a list
+            put pageArray_FindItemType ("graphviz", pageArray) into itemNum
+            pageArray_DeleteItem pageArray, itemNum
+         end if
+   end switch
    --
    return pageArray
 end help_FetchNewPageArray
@@ -173,15 +342,6 @@ function help_ConstructHandlerTitle hKey
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    return hName
 end help_ConstructHandlerTitle
-
-function help_ConstructDomain scriptType
-   if scriptType = "controller" then
-      put "menu.livecode.world" into wikiDomain
-   else
-      put scriptType & ".livecode.world" into wikiDomain
-   end if
-   return wikiDomain
-end help_ConstructDomain
 
 function help_ConstructMenuUrl gMenuTitle, pCheckURL
    put help_ConstructDomain ("menu") into wikiDomain
@@ -312,36 +472,6 @@ command help_IndentHandler @someHandler
 end help_IndentHandler
 
 
---> Help | Template | Model
--
-function help_FetchTemplateArray scriptType, pStripJournal
-   -- see also "federation_FetchTemplatePageArray"
-   put help_FetchTemplateJson (scriptType) into templateJSON
-   put json_ToArray (templateJSON) into templateArray
-   if pStripJournal is true then
-      pageArray_StripJournal templateArray
-   end if
-   return templateArray
-end help_FetchTemplateArray
-
-function help_FetchTemplateJson scriptType
-   put help_ConstructDomain (scriptType) into fedwikiDomain
-   put scriptType & "-" & "template" into pageSlug
-   put pageJson_Fetch (fedwikiDomain, pageSlug) into pageJSON
-   return pageJSON
-end help_FetchTemplateJson
-
-function help_GetHkeyTags hKey
-   put lcw_FetchPageData (hKey) into pageData
-   put pageData_GetText (pageData, "handlerTags") into handlerTags
-   replace "[[" with empty in handlerTags
-   replace "]]" with empty in handlerTags
-   replace "-" with empty in handlerTags
-   replace space with empty in handlerTags
-   return handlerTags
-end help_GetHkeyTags
-
-
 --> LCW | Handler | Model
 -
 /*
@@ -465,60 +595,6 @@ private function _ConstructParamList someHandler
    delete char -1 of paramTable
    return paramTable
 end _ConstructParamList
-
-private command _AddObjectCurlyData @curlyData, scriptType, sObject
-   put the stack_Name of sObject into stackName
-   put the project_Name of sObject into projectName 
-   --
-   switch scriptType
-      case "menu"
-      case "controller"
-         -- put the script_Metadata ["name"] of sObject into stackName
-         put help_ConstructMenuPageTitle (stackName) into menuTitle
-         put the menu_Handlers [menuTitle] of sObject into mHandlers
-         put mHandlers into curlyData ["all"]["Menu Handler Index"]
-         --
-         put help_ConstructMenuPageTitle (stackName) into pageTitle
-         put pageTitle into curlyData ["title"]
-         --
-         return pageTitle
-      case "ide"         
-         put the script_MarkdownHandlerindex of sObject into curlyData ["all"]["Handler List"]
-         put relFolder into curlyData ["all"]["rel folder"]
-         put shortFile into curlyData ["all"]["short file"]
-         break
-      case "transport"
-         break
-      case "home"
-      case "project"
-         put the project_Deps of sObject into projectDeps
-         put fedwiki_MarkdownIndex (projectDeps) into markdownIndex
-         put markdownIndex into curlyData ["all"]["Project Dep List"]
-         --
-         put project_GetStackNameArray (projectName) into stackNameArray
-         repeat for each item shortFolder in "Libraries,Models,Controllers,Modules,Views"
-            put stackNameArray [shortFolder] into sArray
-            put the keys of sArray into someIndex
-            if someIndex is empty then next repeat
-            
-            put "#" && shortFolder & CR&CR after pMarkdown
-            sort someIndex
-            put fedwiki_MarkdownIndex (someIndex) & CR&CR after pMarkdown
-         end repeat
-         delete char -1 of pMarkdown
-         put pMarkdown into curlyData ["all"]["Project Components"]
-         break
-      case "library"
-         -- put "8869c0772777be8e" into githubLinkID
-         --put the script_MarkdownHandlerindex of tObject into curlyData ["all"]["Handler List"]
-         -- put the script_Deps of tObject into curlyData ["all"]["Stack Deps"]
-      default
-         -- some random object?
-   end switch
-   
-   put stackName into curlyData ["title"]
-   return stackName
-end _AddObjectCurlyData
 
 private command _AddProjectArrayBit @curlyData, shortFolder, stackNameArray
    put markdownIndex into curlyData ["all"][shortFolder]
