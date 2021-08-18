@@ -65,7 +65,7 @@ end disabled_RecreateHelp
 on menu_Help sObject
    launch_ObjectHelp sObject
    if the result is empty then
-      menu_RecreateHelp sObject
+      menu_RecreateObjectHelp sObject
    end if
 end menu_Help
 
