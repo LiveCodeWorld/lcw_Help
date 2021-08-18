@@ -105,10 +105,7 @@ on _RecreateHelp hKey
    --
    lcw_Answer "Are you sure you wish to create the wiki help page for handler '[[hName]]'? This will overwrite any existing page.", editorStack, hName
    
-   if the git_IsCommitted of hObject is false then
-      -- if the git_IsClean of hObject is false then
-      ask_PushGithub hObject
-   end if
+   ask_PushGithub hObject
    --
    help_CreateFromHkey hKey
    put the result into pageArray
@@ -129,7 +126,7 @@ end menu_LaunchGithubUrl
 on menu_TransporterHelp hKey
    put transport_HelpURL (hKey, true) into someURL
    if someURL is empty then
-      transport_CreateHelp hKey
+      transport_CreateHkeyHelp hKey
       put transport_HelpURL (hKey) into someURL
    end if
    launch url someURL

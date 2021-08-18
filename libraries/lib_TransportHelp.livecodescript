@@ -12,11 +12,63 @@ version: 0.1
 
 --> Working on
 -
+command help_CreateTransportPage tObject, pageTitle, pScriptHelp
+   put "transport" into scriptType
+   --
+   put the dep_StackNames of tObject into dProjectNames
+   replace comma with CR in dProjectNames
+   --
+   put the stack_Name of tObject into stackName
+   put stackName into tName
+   replace ".lc" with empty in tName
+   put help_ConstructTitle (stackName, scriptType) into pageTitle
+   
+   put help_ObjectCurlyData (tObject, scriptType) into curlyData
+   /*
+   put the transport_DepHkeyArray of tObject into hKeyArray
+   put hkeyArray_GetProjectDepArray (hkeyArray) into dArray
+   put the keys of dArray into dProjectNames
+   --  put hkeyArray_GetStackDepArray (hkeyArray) into objectDepArray
+   */
+   
+   put pageTitle into curlyData ["all"]["transport name"]
+   put tName into curlyData ["all"]["transport route"]
+   put the rig_RouteNames of tObject into routeNames
+   put help_GetTagItems (routeNames) into curlyData ["all"]["tagNames"]
+   put fedwiki_MarkdownIndex (dProjectNames) into curlyData ["all"]["Project Deps"]
+   put "https://rest.livecode.world/" & tName into curlyData ["all"]["restURL"]
+   
+   put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
+   
+   # Check
+   if pageArray_Check (pageArray) is false then
+      put help_ConstructDomain ("transport") into helpDomain
+      return merge ("Error, could not fetch template for '[[scriptType]]' at '[[helpDomain]]'")
+   end if
+   
+   # Get script markdown
+   put help_ConstructMarkdown (routeNames, tObject)into someMarkdown
+   put "# Routes" & CR&CR before someMarkdown
+   
+   # Replace "Routes section
+   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
+   pageArray_ReplaceSectionBody pageArray, "Routes", storyArray
+   
+   # Store 
+   help_CreatePageArray pageArray, scriptType
+   return the result
+end help_CreateTransportPage
+
+function help_ConstructTransportTitle stackName
+   set the itemdelimiter to "."
+   put text_InitialCaps (item 1 of stackName) && "Transport" after pageTitle
+   return pageTitle
+end help_ConstructTransportTitle
 
 
 --> Transport | Help
 -
-command transport_CreateHelp hKey, pScriptHelp
+command transport_CreateHkeyHelp hKey, pScriptHelp
    _TransportInfo hKey, wikiDomain, pageTitle, pageSlug, hObject
    if the result = "index" then
       put _TransportHkeyCurlyData (hKey) into curlyData
@@ -28,7 +80,7 @@ command transport_CreateHelp hKey, pScriptHelp
    end if
    put the result into shellResult
    return shellResult
-end transport_CreateHelp
+end transport_CreateHkeyHelp
 
 command transport_CreateRouteWelcomeHelp routeHkey
    hkey_Normalize routeHkey

@@ -28,14 +28,14 @@ private command _Init mController
    put helpActive into LocalArray ["helpActive"]
 end _Init
 
-getprop disabed_UpdateHelp
-   switch
-      case LocalArray ["helpURL"] is empty
-      case LocalArray ["helpActive"] is false
-         return "delete"
-      default
-         return false
-   end switch
+-- getprop disabed_UpdateHelp
+switch
+   case LocalArray ["helpURL"] is empty
+   case LocalArray ["helpActive"] is false
+      return "delete"
+   default
+      return false
+end switch
 end disabed_UpdateHelp
 
 -- getprop disabled_Help
@@ -77,17 +77,30 @@ end menu_ProjectHelp
 on _
 end _
 
-on menu_RecreateHelp sObject
+on menu_RecreateObjectHelp sObject
    put the name of sObject into oName
    put rev_ScriptEditorStack () into editorStack
    lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", editorStack, oName
    
-   if the git_IsCommitted of sObject is false then ask_PushGithub sObject
+   ask_PushGithub sObject
    help_CreateFromObject sObject
    launch_ObjectHelp sObject
-end menu_RecreateHelp
+end menu_RecreateObjectHelp
 
-on _UpdateHelp sObject
+on menu_UpdateCodeSection sObject
+   help_UpdateObjectCodeSection sObject
+   launch_ObjectHelp sObject
+end menu_UpdateCodeSection
+
+on menu_UpdateObjectHelp sObject
    help_UpdateFromObject sObject
    launch_ObjectHelp sObject
-end _UpdateHelp
+end menu_UpdateObjectHelp
+
+on menu_UploadGraph sObject, sGraph
+   breakPoint
+end menu_UploadGraph
+
+getprop uploadGraph_Params [sObject]
+   return empty
+end uploadGraph_Params

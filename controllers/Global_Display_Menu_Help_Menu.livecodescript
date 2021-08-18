@@ -70,7 +70,7 @@ on menu_CreateMenuHelp mController
    put rev_ScriptEditorStack () into editorStack
    lcw_Answer "Are you sure you wish to create the wiki help page for the menu '[[gMenuTitle]]'? This will overwrite any existing page.", editorStack, gMenuTitle
    --
-   if the git_IsCommitted of mController is false then ask_PushGithub mController
+   ask_PushGithub mController
    help_CreateMenuPage gMenuTitle
    launch_MenuHelp gMenuTitle
 end menu_CreateMenuHelp

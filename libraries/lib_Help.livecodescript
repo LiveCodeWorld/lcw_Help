@@ -5,7 +5,7 @@ copyright: David Bovill
 license: GPLv3
 name: lib_Help
 type: library
-version: 0.3
+version: 0.4
 deps: lcw_Wiki
 
 /*
@@ -13,20 +13,82 @@ lcw_Help uses the livecode.world federated wiki to store it's help.
 As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 */
 
+--> Props
+-
+getprop help_Url [pCheckURL]
+   put the long id of the target into tObject
+   put the stack_Name of tObject into stackName
+   put the script_Type of tObject into scriptType
+   put help_ConstructURL (stackName, scriptType, pCheckURL) into someURL
+   return someURL
+end help_Url
+
+getprop script_MarkdownHandlerIndex
+   put the long id of the target into hObject
+   put the revAvailableHandlers of hObject into hTable
+   repeat for each line hTableLine in hTable
+      put word 1 of hTableLine into hType
+      if char 1 of hType = "P" then next repeat
+      
+      put word 2 of hTableLine into hName
+      put word 3 of hTableLine + 1 into sLineNum
+      put word 4 of hTableLine + 1 into eLineNum
+      
+      put github_handlerURL (hObject, sLineNum, eLineNum) into githubURL 
+      put "- [" & hName & "](" & githubURL & ")" & CR after markdownIndex
+   end repeat
+   delete char -1 of markdownIndex
+   return markdownIndex
+end script_MarkdownHandlerindex
+
+
+--> Help | Update
+-
+command help_UpdateObjectCodeSection sObject
+   local storyArray
+   ask_PushGithub sObject
+   put lcw_FetchObjectPageArray (sObject) into pageArray
+   --
+   put the github_Permalink of sObject into permaLink
+   put the script_HandlerNames [true] of sObject into hNames
+   put help_CodeSectionMarkdown (hNames, permaLink) into sMarkdown
+   put sMarkdown into storyArray [1]
+   --
+   pageArray_ReplaceSectionBody pageArray, "Code", storyArray
+   lcw_StoreObjectPageArray sObject, pageArray
+   return pageArray
+end help_UpdateObjectCodeSection
+
+function help_CodeSectionMarkdown hNames, permaLink
+   put "The library contains the following public handlers:" into sMarkdown
+   put CR&CR & fedwiki_MarkdownIndex (hNames) after sMarkdown
+   --
+   put CR&CR & "The model is written in [[Livecode]]." after sMarkdown
+   put space & "You can view the source here - [" after sMarkdown
+   put permaLink after sMarkdown
+   put space & "gist]" after sMarkdown
+   --
+   return sMarkdown
+end help_CodeSectionMarkdown
+
+command help_UpdateFromHkey hKey
+   put lcw_FetchHandlerArray (hKey) into pageArray
+   put help_HkeyCurlyData (hKey, true) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreHandlerArray hKey, pageArray
+end help_UpdateFromHkey
+
+command help_UpdateFromObject sObject
+   -- does not use script_Help to update first paragraph
+   put lcw_FetchObjectPageArray (sObject) into pageArray
+   put help_ObjectCurlyData (sObject) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   lcw_StoreObjectPageArray sObject, pageArray
+end help_UpdateFromObject
+
+
 --> Working on
 -
-function pageArray_Check pageArray
-   -- quick hack
-   switch
-      case "title" is not among the keys of pageArray
-      case "story" is not among the keys of pageArray
-      case "journal" is not among the keys of pageArray
-         return false
-      default
-         return true
-   end switch
-end pageArray_Check
-
 private command _AddObjectCurlyData @curlyData, scriptType, sObject
    put the stack_Name of sObject into stackName
    put the project_Name of sObject into projectName 
@@ -87,6 +149,62 @@ private command _AddObjectCurlyData @curlyData, scriptType, sObject
    return stackName
 end _AddObjectCurlyData
 
+private function _ConstructHandlerTags hKey, pUpdate
+   -- used by "help_HkeyCurlyData()"
+   local handlerTagList
+   
+   put hkey_ConstructKeywords (hKey) into handlerTags
+   if pUpdate is true then
+      put comma after handlerTags
+      put help_GetHkeyTags (hkey) into lcwHandlerTags
+      repeat for each item lcwHandlerTag in lcwHandlerTags
+         if lcwHandlerTag is not among the items of handlerTags then
+            put lcwHandlerTag & comma after handlerTags
+         end if
+      end repeat
+      delete char -1 of handlerTags
+   end if
+   --
+   put _GetMarkdownTagItems (someTags, "from,to") into handlerTagList
+   --
+   return handlerTagList
+end _ConstructHandlerTags
+
+private function _GetMarkdownTagItems someTags, pNotThese
+   repeat for each line someTag in someTags
+      if someTag is among the items of pNotThese then next repeat
+      put "[[" & someTag & "]], " after handlerTagList
+   end repeat
+   delete char -2 to -1 of handlerTagList
+   return handlerTagList
+end _GetMarkdownTagItems
+
+
+--> Help | Tags
+-
+function help_GetTagItems hNames
+   put help_GetTags (hNames, ",") into tagItems
+   replace CR with empty in tagItems
+   delete char 1 to 2 of tagItems
+   return tagItems
+end help_GetTagItems
+
+function help_GetTags hNames, pBullet
+   if pBullet is empty then put "-" into pBullet -- comma or "1."
+   replace comma with CR in hNames
+   repeat for each line hName in hNames
+      put text_SplitIntoWords (hName) into tagNames
+      repeat for each line tagName in tagNames
+         put tolower (tagName) into someTag
+         put pBullet && "[[" & someTag & "]]" into tagLine
+         put someTag into tagArray [tagLine]
+      end repeat
+   end repeat
+   put the keys of tagArray into helpTagLines
+   sort lines of helpTagLines by token 4 of each 
+   return helpTagLines
+end help_GetTags
+
 function help_GetHkeyTags hKey
    put lcw_FetchPageData (hKey) into pageData
    put pageData_GetText (pageData, "handlerTags") into handlerTags
@@ -96,35 +214,6 @@ function help_GetHkeyTags hKey
    replace space with empty in handlerTags
    return handlerTags
 end help_GetHkeyTags
-
-
---> Props
--
-getprop help_Url [pCheckURL]
-   put the long id of the target into tObject
-   put the stack_Name of tObject into stackName
-   put the script_Type of tObject into scriptType
-   put help_ConstructURL (stackName, scriptType, pCheckURL) into someURL
-   return someURL
-end help_Url
-
-getprop script_MarkdownHandlerIndex
-   put the long id of the target into hObject
-   put the revAvailableHandlers of hObject into hTable
-   repeat for each line hTableLine in hTable
-      put word 1 of hTableLine into hType
-      if char 1 of hType = "P" then next repeat
-      
-      put word 2 of hTableLine into hName
-      put word 3 of hTableLine + 1 into sLineNum
-      put word 4 of hTableLine + 1 into eLineNum
-      
-      put github_handlerURL (hObject, sLineNum, eLineNum) into githubURL 
-      put "- [" & hName & "](" & githubURL & ")" & CR after markdownIndex
-   end repeat
-   delete char -1 of markdownIndex
-   return markdownIndex
-end script_MarkdownHandlerindex
 
 
 --> Help | Template | Model
@@ -200,7 +289,7 @@ command help_CreateFromHkey hKey, pScriptHelp
          help_CreateMenuItem hKey, pScriptHelp
          break
       case hkey_IsTransportHandler (hKey)
-         transport_CreateHelp hKey, pScriptHelp
+         transport_CreateHkeyHelp hKey, pScriptHelp
          break
       default
          put help_ConstructHandlerTitle (hKey) into pageTitle
@@ -245,32 +334,6 @@ command help_CreatePageArray pageArray, scriptType
    end if
 end help_CreatePageArray
 
-command help_CreateTransportPage sObject, pageTitle, pScriptHelp
-   put "transport" into scriptType
-   --
-   put help_ObjectCurlyData (sObject, scriptType) into curlyData
-   put the stack_Name of sObject into stackName
-   put help_ConstructTitle (stackName, scriptType) into pageTitle
-   put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
-   
-   # Check
-   if pageArray_Check (pageArray) is false then
-      put help_ConstructDomain ("transport") into helpDomain
-      return merge ("Error, could not fetch template for '[[scriptType]]' at '[[helpDomain]]'")
-   end if
-   
-   # Get script markdown
-   put the handler_PermalinkMarkdown [true] of tObject into someMarkdown
-   
-   # Replace "Routes section
-   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
-   pageArray_ReplaceSectionBody pageArray, "Routes", storyArray
-   
-   # Store 
-   help_CreatePageArray pageArray, scriptType
-   return the result
-end help_CreateTransportPage
-
 function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
    put help_ConstructDomain (scriptType) into wikiDomain
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
@@ -309,24 +372,6 @@ command help_RenameTemplate @pageArray, pageTitle, pWikiDomain
    # Add forks to journal
    pageArray_AddFork pageArray, forkDomains
 end help_RenameTemplate
-
-
---> Help | Update
--
-command help_UpdateFromHkey hKey
-   put lcw_FetchHandlerArray (hKey) into pageArray
-   put help_HkeyCurlyData (hKey, true) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   lcw_StoreHandlerArray hKey, pageArray
-end help_UpdateFromHkey
-
-command help_UpdateFromObject sObject
-   -- does not use script_Help to update first paragraph
-   put lcw_FetchObjectPageArray (sObject) into pageArray
-   put help_ObjectCurlyData (sObject) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   lcw_StoreObjectPageArray sObject, pageArray
-end help_UpdateFromObject
 
 
 --> Help | Construct
@@ -378,12 +423,6 @@ function help_ConstructTitle stackName, scriptType
          return stackName
    end switch
 end help_ConstructTitle
-
-function help_ConstructTransportTitle stackName
-   set the itemdelimiter to "."
-   put text_InitialCaps (item 1 of stackName) && "Transport" after pageTitle
-   return pageTitle
-end help_ConstructTransportTitle
 
 function help_HkeyCurlyData hKey, pUpdate
    -- also used by handlers in "lib_Transport"
@@ -611,30 +650,6 @@ private command _SetHkeyPageItemDictionary @curlyData
    curly_SetItemIDArray curlyData, "paramList", "0a99c44502e29156"
    curly_SetItemIDArray curlyData, "githubPara", "8869c0772777be8e"
 end _SetHkeyPageItemDictionary
-
-private function _ConstructHandlerTags hKey, pUpdate
-   local handlerTagList
-   
-   put hkey_ConstructKeywords (hKey) into handlerTags
-   put "from,to" into notThese
-   if pUpdate is true then
-      put comma after handlerTags
-      put help_GetHkeyTags (hkey) into lcwHandlerTags
-      repeat for each item lcwHandlerTag in lcwHandlerTags
-         if lcwHandlerTag is not among the items of handlerTags then
-            put lcwHandlerTag & comma after handlerTags
-         end if
-      end repeat
-      delete char -1 of handlerTags
-   end if
-   
-   repeat for each line someTag in handlerTags
-      if someTag is among the items of notThese then next repeat
-      put "[[" & someTag & "]], " after handlerTagList
-   end repeat
-   delete char -2 to -1 of handlerTagList
-   return handlerTagList
-end _ConstructHandlerTags
 
 private command _AddGitHubObjectCurlyData @curlyData, sObject
    put the github_LaunchURL of sObject into objectLink

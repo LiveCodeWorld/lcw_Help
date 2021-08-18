@@ -11,6 +11,8 @@ version: 0.1
 This library is for creating and displaying help for LCW menus in wiki.
 */
 
+--> To Organise
+-
 
 --> Props
 -
@@ -36,12 +38,25 @@ getprop menu_PermalinkMarkdown [pFast]
    return someMarkdown
 end menu_PermalinkMarkdown
 
-getprop handler_PermalinkMarkdown [pNotPrivate]
+getprop handler_PermaMarkdown [pNotPrivate]
    put the long id of the target into hObject
    
    # Collect handler names
    put the script_HandlerNames [pNotPrivate] of hObject into hNames
+   put help_ConstructMarkdown (hNames, hObject)into someMarkdown
+   return someMarkdown
+end handler_PermaMarkdown
+
+getprop transport_PermaMarkdown [pNotPrivate]
+   put the long id of the target into hObject
    
+   # Collect handler names
+   put the script_HandlerNames [pNotPrivate] of hObject into hNames
+   put help_ConstructMarkdown (hNames, hObject)into someMarkdown
+   return someMarkdown
+end transport_PermaMarkdown
+
+function help_ConstructMarkdown hNames, hObject
    # Construct markdown
    _SetCommitStuff hObject, sFile, checkoutFolder, relativePath, commitHash, repoBit
    repeat for each line hName in hNames
@@ -51,23 +66,31 @@ getprop handler_PermalinkMarkdown [pNotPrivate]
             put "- -" & CR after someMarkdown
             break
          default
-            put menu_CommandToText (hName) into pText
             put _Markdownline (hName, hObject, commitHash, repoBit, relativePath) & CR after someMarkdown
       end switch   
    end repeat
    delete char -1 of someMarkdown
    return someMarkdown
-end handler_PermalinkMarkdown
+end help_ConstructMarkdown
 
 
 --> Help | Launch
 -
 command launch_MenuHelp gMenuTitle
    put help_ConstructMenuUrl (gMenuTitle, true) into someURL
-   if someURL is empty then return empty
-   --
-   launch url someURL
-   return someURL
+   if someURL is not empty then
+      launch url someURL
+      return someURL
+   end if
+   
+   help_CreateMenuPage gMenuTitle
+   if item 1 of the result = "Error" then
+      return the result
+   else
+      put help_ConstructMenuUrl (gMenuTitle, true) into someURL
+      launch url someURL
+      return someURL
+   end if
 end launch_MenuHelp
 
 command launch_ObjectHelp tObject
@@ -115,10 +138,10 @@ end launch_MenuWikiDomain
 
 --> Working on
 -
-function help_ConstructMenuStory mTitle, pHow, pMenuController
+function help_ConstructMenuStory gMenuTitle, pHow, pMenuController
    # Markdown to Github permalinks version
    if pHow is not among the items of "handler,reference" then
-      put help_ConstructHandlerStoryMD (mTitle, pMenuController) into storyArray
+      put help_ConstructHandlerStoryMD (gMenuTitle, pMenuController) into storyArray
       return storyArray
    end if
    
@@ -128,7 +151,7 @@ function help_ConstructMenuStory mTitle, pHow, pMenuController
    end if
    if exists (pMenuController) is false then return empty
    
-   put the menu_Handlers [mTitle] of pMenuController into mHandlers
+   put the menu_Handlers [gMenuTitle] of pMenuController into mHandlers
    put help_ConstructHandlerStory (mHandlers, pHandlerObject) into pageArray
    
    return pageArray ["story"]
@@ -145,8 +168,11 @@ function help_ConstructMenuMarkdown gMenuTitle, pMenuController
    if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
    if exists (pMenuController) is false then return empty
    
-   # Construct markdown  
-   put the handler_PermalinkMarkdown [gMenuTitle] of pMenuController into someMarkdown
+   # Update git and push if needed
+   ask_PushGithub pMenuController
+   
+   # Construct menu-markdown  
+   put the menu_PermalinkMarkdown [gMenuTitle] of pMenuController into someMarkdown
    put "# Menu" & CR&CR before someMarkdown
    --
    return someMarkdown
@@ -242,7 +268,12 @@ command help_CreateMenuPage gMenuTitle, pMenuController
    if pageArray is empty then return empty
    help_MenuMergeAndStore pMenuController, pageArray
    --
-   return the result
+   if item 1 of the result = "Error" then
+      return the result
+   else
+      put help_ConstructMenuUrl (gMenuTitle, true) into someURL
+      return someURL
+   end if
 end help_CreateMenuPage
 
 function help_CreateMenuPageArray gMenuTitle, mController, pHow
