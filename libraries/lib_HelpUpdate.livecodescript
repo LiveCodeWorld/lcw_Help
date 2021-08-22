@@ -18,7 +18,7 @@ Pages may have been hand-written, but these handlers are designed to update the 
 command help_UpdateObjectCodeSection sObject
    local storyArray
    ask_PushGithub sObject
-   put lcw_FetchObjectPageArray (sObject) into pageArray
+   put help_FetchObjectPageArray (sObject) into pageArray
    --
    put the github_Permalink of sObject into permaLink
    put the script_HandlerNames [true] of sObject into hNames
@@ -27,7 +27,7 @@ command help_UpdateObjectCodeSection sObject
    put it into storyArray[1]
    --
    pageArray_ReplaceSectionBody pageArray, "Code", storyArray
-   lcw_StoreObjectPageArray sObject, pageArray
+   help_StoreObjectPageArray sObject, pageArray
    return pageArray
 end help_UpdateObjectCodeSection
 
@@ -47,16 +47,16 @@ function help_CodeSectionMarkdown hNames, permaLink
 end help_CodeSectionMarkdown
 
 command help_UpdateFromHkey hKey
-   put lcw_FetchHandlerArray (hKey) into pageArray
+   put help_FetchHandlerPageArray (hKey) into pageArray
    put help_HkeyCurlyData (hKey, true) into curlyData
    curly_MergePageArray pageArray, curlyData
-   lcw_StoreHandlerArray hKey, pageArray
+   help_StoreHandlerPageArray hKey, pageArray
 end help_UpdateFromHkey
 
 command help_UpdateFromObject sObject
    -- does not use script_Help to update first paragraph
-   put lcw_FetchObjectPageArray (sObject) into pageArray
+   put help_FetchObjectPageArray (sObject) into pageArray
    put help_ObjectCurlyData (sObject) into curlyData
    curly_MergePageArray pageArray, curlyData
-   lcw_StoreObjectPageArray sObject, pageArray
+   help_StoreObjectPageArray sObject, pageArray
 end help_UpdateFromObject

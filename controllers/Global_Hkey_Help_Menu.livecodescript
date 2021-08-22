@@ -144,14 +144,28 @@ on menu_UpdateHelpGraph hKey, shortFile
          put item 1 of shortFile into graphStyle
          put hkey_GetDotText (hKey, graphStyle) into dotText
          --
-         put lcw_FetchHandlerArray (hKey) into pageArray
+         put help_FetchHandlerPageArray (hKey) into pageArray
          pageArray_ReplaceGraph pageArray, dotText
          --
-         lcw_StoreHandlerArray hKey, pageArray
+         help_StoreHandlerPageArray hKey, pageArray
          --
          launch_HkeyHelp hKey
    end switch
 end menu_UpdateHelpGraph
+
+on menu_UpdateCode hKey
+   put help_FetchHandlerPageArray (hKey) into pageArray
+   put pageArray_FindFirstSectionItem ("Handler", "code", pageArray) into itemNum
+   --
+   if itemNum > 0 then
+      put hkey_FetchHandler (hKey) into someHandler
+      pageArray_EditItem pageArray, someHandler, itemNum
+      help_StoreHandlerPageArray hKey, pageArray
+   else
+      put LocalArray ["tObject"] into tObject
+      lcw_AnswerWarning "Could not locate 'code' section of handler page '[[hKey]]'!", tObject, hKey
+   end if
+end menu_UpdateCode
 
 on menu_UpdateMetadata hKey
    switch

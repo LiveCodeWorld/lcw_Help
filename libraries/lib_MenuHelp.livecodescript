@@ -56,27 +56,18 @@ getprop transport_PermaMarkdown [pNotPrivate]
    return someMarkdown
 end transport_PermaMarkdown
 
-function help_ConstructMarkdown hNames, hObject
-   # Construct markdown
-   _SetCommitStuff hObject, sFile, checkoutFolder, relativePath, commitHash, repoBit
-   repeat for each line hName in hNames
-      set the cursor to busy
-      switch
-         case hName = "_"
-            put "- -" & CR after someMarkdown
-            break
-         default
-            put _Markdownline (hName, hObject, commitHash, repoBit, relativePath) & CR after someMarkdown
-      end switch   
-   end repeat
-   delete char -1 of someMarkdown
-   return someMarkdown
-end help_ConstructMarkdown
-
 
 --> Help | Launch
 -
 command launch_MenuHelp gMenuTitle
+   if gMenuTitle is empty then
+      put debug_CallingObject() into mController
+      put the menu_GlobalTitle of mController into gMenuTitle
+   end if
+   if menu_Exists (gMenuTitle) is false then
+      return "Error, cannot locate menu:" && gMenuTitle
+   end if
+   
    put help_ConstructMenuUrl (gMenuTitle, true) into someURL
    if someURL is not empty then
       launch url someURL
@@ -163,6 +154,26 @@ function help_ConstructHandlerStoryMD gMenuTitle, pMenuController
    return storyArray
 end help_ConstructHandlerStoryMD
 
+
+--> Help | Construct
+-
+function help_ConstructMarkdown hNames, hObject
+   # Construct markdown
+   _SetCommitStuff hObject, sFile, checkoutFolder, relativePath, commitHash, repoBit
+   repeat for each line hName in hNames
+      set the cursor to busy
+      switch
+         case hName = "_"
+            put "- -" & CR after someMarkdown
+            break
+         default
+            put _Markdownline (hName, hObject, commitHash, repoBit, relativePath) & CR after someMarkdown
+      end switch   
+   end repeat
+   delete char -1 of someMarkdown
+   return someMarkdown
+end help_ConstructMarkdown
+
 function help_ConstructMenuMarkdown gMenuTitle, pMenuController
    local pageArray
    if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
@@ -248,71 +259,6 @@ function help_MenuWikiDomain pageTitle
 end help_MenuWikiDomain
 
 
---> Help | Menu | Create
--
-command help_CreateOrUpdateMenuPage gMenuTitle
-   if help_CheckMenu (gMenuTitle) is true then
-      help_UpdateMenu gMenuTitle, "reference"
-      if the result is empty then
-         breakpoint -- should create
-      end if
-   else
-      help_CreateMenuPage gMenuTitle
-   end if
-end help_CreateOrUpdateMenuPage
-
-command help_CreateMenuPage gMenuTitle, pMenuController
-   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
-   --
-   put help_CreateMenuPageArray (gMenuTitle, pMenuController, "links") into pageArray
-   if pageArray is empty then return empty
-   help_MenuMergeAndStore pMenuController, pageArray
-   --
-   if item 1 of the result = "Error" then
-      return the result
-   else
-      put help_ConstructMenuUrl (gMenuTitle, true) into someURL
-      return someURL
-   end if
-end help_CreateMenuPage
-
-function help_CreateMenuPageArray gMenuTitle, mController, pHow
-   put menu_StripGlobal (gMenuTitle) into pageTitle
-   
-   # Fetch template
-   put pageArray_Fetch ("menu.livecode.world", "menu-template") into pageArray
-   
-   # Add forks, rename and tidy
-   help_RenameTemplate pageArray, pageTitle, wikiDomain
-   
-   # Replace Menu section
-   put help_ConstructMenuStory (gMenuTitle, pHow, mController) into storyArray
-   pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
-   --
-   return pageArray
-end help_CreateMenuPageArray
-
-private command help_MenuMergeAndStore mController, pageArray
-   put pageArray ["title"] into pageTitle -- could get from stackName ?
-   --
-   put help_ConstructDomain ("menu") into wikiDomain
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   --
-   put help_ObjectCurlyData (mController, "menu") into curlyData
-   curly_MergePageArray pageArray, curlyData
-   
-   # Store
-   -- help_CreatePageArray pageArray, "menu"
-   pageArray_Store wikiDomain, pageSlug, pageArray
-   put the result into shellResult -- url
-   if item 1 of shellResult is "Error" then
-      return shellResult
-   else
-      return pageArray
-   end if
-end help_MenuMergeAndStore
-
-
 --> Help | Construct
 -
 function help_ConstructHkeyURL hKey, pCheckURL
@@ -324,47 +270,11 @@ function help_ConstructHkeyURL hKey, pCheckURL
    return someURL
 end help_ConstructHkeyURL
 
-
---> Help | Menu | PageTitle
--
 function help_ConstructMenuPageTitle gMenuTitle
    -- replace "_" with " | " in stackName
    put menu_StripGlobal (gMenuTitle) into pageTitle
    return word 1 to -1 of pageTitle
 end help_ConstructMenuPageTitle
-
-
---> Help | Menu | Create
--
-command help_UpdateMenu gMenuTitle, pHow, pMenuController
-   if pMenuController is empty then
-      put menu_GetGlobalController (gMenuTitle) into pMenuController
-   end if
-   --
-   put menu_StripGlobal (gMenuTitle) into menuPageTitle
-   put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
-   --
-   put pageArray_Fetch ("menu.livecode.world", menuPageSlug) into pageArray
-   if pageArray is empty then return empty
-   --
-   put help_ConstructMenuStory (gMenuTitle, pHow, pMenuController) into storyArray
-   pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
-   --
-   help_MenuMergeAndStore pMenuController, pageArray
-   --
-   return the result
-end help_UpdateMenu
-
-
---> Help | Menu | Fetch
--
-function help_FetchMenuHelpArray gMenuTitle
-   -- fetch wiki-page in "menu.livecode.world"
-   put menu_StripGlobal (gMenuTitle) into pageTitle
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   put pageArray_Fetch ("menu.livecode.world", pageSlug) into pageArray
-   return pageArray
-end help_FetchMenuHelpArray
 
 function help_CheckMenu gMenuTitle
    put help_FetchMenuHelpArray (gMenuTitle) into pageArray
@@ -395,25 +305,6 @@ private function _Markdownline hName, hObject, commitHash, repoBit, relativePath
    return it
 end _Markdownline
 
-private command help_MenuItemMergeAndStore hKey, menuSubDomain, pageArray, pUpdate
-   put pageArray ["title"] into pageTitle
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   --
-   put help_HkeyCurlyData (hKey, pUpdate) into curlyData
-   curly_MergePageArray pageArray, curlyData
-   --
-   pageArray_Store menuSubDomain, pageSlug, pageArray
-   put the result into shellResult
-   if shellResult is empty then
-      return pageArray
-   else
-      return shellResult
-   end if
-end help_MenuItemMergeAndStore
-
-
---> Deps
--
 private function fedwiki_ConstructSlug pageTitle
    -- it is very annoying that "_" is not an allowed character
    replace space with "-" in pageTitle
