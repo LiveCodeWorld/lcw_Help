@@ -67,7 +67,6 @@ command help_UpdateObjectCodeSection sObject
          pageArray_ReplaceSectionBody pageArray, "Code", storyArray
    end switch
    --
-   breakpoint
    help_StoreObjectPageArray sObject, pageArray
    return pageArray
 end help_UpdateObjectCodeSection

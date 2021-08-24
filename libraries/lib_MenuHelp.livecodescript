@@ -27,14 +27,41 @@ getprop help_MenuPageArray
    return pageArray
 end help_MenuPageArray
 
-function help_FetchMenuPageArray gMenuTitle, mController
+function help_ConstructMenuStory gMenuTitle, pHow, pMenuController
+   # Find the mController
+   if pMenuController is empty then
+      put menu_GetGlobalController (gMenuTitle) into pMenuController
+   end if
+   if exists (pMenuController) is false then return empty
+   
+   switch pHow
+      case "handler"
+      case "reference"
+         # Markdown to Github permalinks version
+         put help_ConstructHandlerStoryMD (gMenuTitle, pMenuController) into storyArray
+         break
+      case "menu"
+         put the menu_Handlers [gMenuTitle] of pMenuController into mHandlers
+         put help_ConstructHandlerStory (mHandlers, pMenuController) into pageArray
+         put pageArray ["story"] into storyArray
+         break
+      default
+         put the menu_PermalinkMarkdown of pMenuController into sMarkdown
+         get storyArray_ConstructItem (sMarkdown, "markdown")
+         put it into storyArray[1]
+   end switch
+   return storyArray
+end help_ConstructMenuStory
+
+function help_ConstructHandlerStoryMD gMenuTitle, pMenuController
+   put help_ConstructMenuMarkdown (gMenuTitle, pMenuController) into someMarkdown
+   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
+   return storyArray
+end help_ConstructHandlerStoryMD
+
+function help_FetchMenuPageArray gMenuTitle, mController, pHow
    put help_FetchMenuTemplate (gMenuTitle, mController) into pageArray
-   -- 
-   put help_ConstructMenuStory (gMenuTitle, "reference", mController) into storyArray
-   -- put the menu_PermalinkMarkdown of mController into sMarkdown
-   -- get storyArray_ConstructItem (sMarkdown, "markdown")
-   -- put it into storyArray[1]
-   --
+   put help_ConstructMenuStory (gMenuTitle, pHow, mController) into storyArray
    pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
    return pageArray
 end help_FetchMenuPageArray
@@ -93,6 +120,155 @@ getprop transport_PermaMarkdown [pNotPrivate]
 end transport_PermaMarkdown
 
 
+--> Help | Menu | Create
+-
+command launch_MenuControllerHelp mController, pDisplayView
+   put the menu_GlobalTitle of mController into gMenuTitle
+   if gMenuTitle is empty then return "Error, no menu_GlobalTitle for:" && mController
+   
+   -- put the help_Url [true] of mController into helpURL
+   put help_ConstructMenuUrl (gMenuTitle, true) into helpURL
+   if helpURL is not empty then
+      launch url helpURL
+      return helpURL
+   end if
+   
+   ask_CreateMenuPage mController, pDisplayView
+   put the result into helpURL
+   return helpURL
+end launch_MenuControllerHelp
+
+command ask_CreateMenuPage mController, pDisplayView
+   put the name of mController into oName
+   if pDisplayView is empty then
+      put rev_ScriptEditorStack () into pDisplayView
+   end if
+   get "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page."
+   lcw_Answer it, pDisplayView, oName
+   
+   help_CreateMenuFromController mController
+   put the result into helpURL
+   return helpURL
+end ask_CreateMenuPage
+
+command help_CreateMenuFromController mController
+   put the menu_GlobalTitle of mController into gMenuTitle
+   if gMenuTitle is empty then return "Error, no menu_GlobalTitle for:" && mController
+   
+   ask_PushGithub mController
+   help_CreateMenuPage gMenuTitle, mController
+   --
+   put help_ConstructMenuUrl (gMenuTitle, true) into helpURL
+   launch url helpURL
+   return helpURL
+end help_CreateMenuFromController
+
+command help_CreateMenuPage gMenuTitle, pMenuController
+   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
+   --
+   put help_CreateMenuPageArray (gMenuTitle, pMenuController, "links") into pageArray
+   if pageArray is empty then return empty
+   help_MenuMergeAndStore pMenuController, pageArray
+   --
+   if item 1 of the result = "Error" then
+      return the result
+   else
+      put help_ConstructMenuUrl (gMenuTitle, true) into someURL
+      return someURL
+   end if
+end help_CreateMenuPage
+
+command help_CreateOrUpdateMenuPage gMenuTitle
+   if help_CheckMenu (gMenuTitle) is true then
+      help_UpdateMenu gMenuTitle, "reference"
+      if the result is empty then
+         breakpoint -- should create
+      end if
+   else
+      help_CreateMenuPage gMenuTitle
+   end if
+end help_CreateOrUpdateMenuPage
+
+command help_UpdateMenu gMenuTitle, pHow, pMenuController
+   if pMenuController is empty then
+      put menu_GetGlobalController (gMenuTitle) into pMenuController
+   end if
+   --
+   put menu_StripGlobal (gMenuTitle) into menuPageTitle
+   put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
+   --
+   put pageArray_Fetch ("menu.livecode.world", menuPageSlug) into pageArray
+   if pageArray is empty then return empty
+   --
+   put help_ConstructMenuStory (gMenuTitle, pHow, pMenuController) into storyArray
+   pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
+   --
+   help_MenuMergeAndStore pMenuController, pageArray
+   --
+   return the result
+end help_UpdateMenu
+
+function help_CreateMenuPageArray gMenuTitle, mController, pHow
+   put menu_StripGlobal (gMenuTitle) into pageTitle
+   
+   # Fetch template
+   put pageArray_Fetch ("menu.livecode.world", "menu-template") into pageArray
+   
+   # Add forks, rename and tidy
+   help_RenameTemplate pageArray, pageTitle, wikiDomain
+   
+   # Replace Menu section
+   put help_ConstructMenuStory (gMenuTitle, pHow, mController) into storyArray
+   pageArray_ReplaceSection pageArray, "Menu", storyArray
+   --
+   return pageArray
+end help_CreateMenuPageArray
+
+function help_FetchMenuHelpArray gMenuTitle
+   -- fetch wiki-page in "menu.livecode.world"
+   put menu_StripGlobal (gMenuTitle) into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put pageArray_Fetch ("menu.livecode.world", pageSlug) into pageArray
+   return pageArray
+end help_FetchMenuHelpArray
+
+command help_MenuItemMergeAndStore hKey, menuSubDomain, pageArray, pUpdate
+   put pageArray ["title"] into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   --
+   put help_HkeyCurlyData (hKey, pUpdate) into curlyData
+   curly_MergePageArray pageArray, curlyData
+   --
+   pageArray_Store menuSubDomain, pageSlug, pageArray
+   put the result into shellResult
+   if shellResult is empty then
+      return pageArray
+   else
+      return shellResult
+   end if
+end help_MenuItemMergeAndStore
+
+private command help_MenuMergeAndStore mController, pageArray
+   put pageArray ["title"] into pageTitle -- could get from stackName ?
+   --
+   put help_ConstructDomain ("menu") into wikiDomain
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   --
+   put help_ObjectCurlyData (mController, "menu") into curlyData
+   curly_MergePageArray pageArray, curlyData
+   
+   # Store
+   -- help_CreatePageArray pageArray, "menu"
+   pageArray_Store wikiDomain, pageSlug, pageArray
+   put the result into shellResult -- url
+   if item 1 of shellResult is "Error" then
+      return shellResult
+   else
+      return pageArray
+   end if
+end help_MenuMergeAndStore
+
+
 --> Help | Launch
 -
 command launch_MenuHelp gMenuTitle
@@ -120,9 +296,19 @@ command launch_MenuHelp gMenuTitle
    end if
 end launch_MenuHelp
 
-command launch_ObjectHelp tObject
+command launch_ObjectHelp tObject, pDisplayObject
    put the help_Url [true] of tObject into helpURL
-   if helpURL is empty then return empty
+   if helpURL is empty then
+      put the name of tObject into oName
+      if exists (pDisplayObject) is false then
+         put rev_ScriptEditorStack () into pDisplayObject
+      end if
+      lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", pDisplayObject, oName
+      
+      ask_PushGithub tObject
+      help_CreateFromObject tObject
+      put the help_Url [true] of tObject into helpURL
+   end if
    --
    launch url helpURL
    return helpURL
@@ -161,34 +347,6 @@ command launch_MenuWikiDomain stackName
    launch url someURL
    return someURL
 end launch_MenuWikiDomain
-
-
---> Working on
--
-function help_ConstructMenuStory gMenuTitle, pHow, pMenuController
-   # Markdown to Github permalinks version
-   if pHow is not among the items of "handler,reference" then
-      put help_ConstructHandlerStoryMD (gMenuTitle, pMenuController) into storyArray
-      return storyArray
-   end if
-   
-   # Find the mController
-   if pMenuController is empty then
-      put menu_GetGlobalController (gMenuTitle) into pMenuController
-   end if
-   if exists (pMenuController) is false then return empty
-   
-   put the menu_Handlers [gMenuTitle] of pMenuController into mHandlers
-   put help_ConstructHandlerStory (mHandlers, pMenuController) into pageArray
-   
-   return pageArray ["story"]
-end help_ConstructMenuStory
-
-function help_ConstructHandlerStoryMD gMenuTitle, pMenuController
-   put help_ConstructMenuMarkdown (gMenuTitle, pMenuController) into someMarkdown
-   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
-   return storyArray
-end help_ConstructHandlerStoryMD
 
 
 --> Help | Construct

@@ -22,7 +22,7 @@ getprop menu_Target [tObject]
    end if
    put the title_Text of tObject into gMenuTitle
    put menu_GetGlobalController(gMenuTitle) into mController
-   menu_SetTarget "Global | Script | Help | Menu", mController
+   menu_SetTarget "Global | Help | Object | Menu", mController
    put gMenuTitle into LocalArray ["gMenuTitle"]
    --
    return mController
@@ -62,7 +62,7 @@ end _GetGlobalMenuTitle
 --> Global | Display | Menu | Help | Menu
 -
 on submenu_ObjectHelp
-   return "Global | Script | Help | Menu"
+   return "Global | Help | Object | Menu"
 end submenu_ObjectHelp
 
 on menu_CreateMenuHelp mController

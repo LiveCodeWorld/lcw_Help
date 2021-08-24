@@ -1,8 +1,8 @@
-﻿script "Global | Script | Help | Menu"
+﻿script "Global | Help | Object | Menu"
 --> MetaData
 -
 license: GPLv3
-name: Global | Script | Help | Menu
+name: Global | Help | Object | Menu
 type: controller
 version: 0.2
 
@@ -12,11 +12,15 @@ version: 0.2
 local LocalArray
 
 getprop menu_Target [tObject]
-   put menu_GetTarget ("Global | Script | Help | Menu") into mController
+   put menu_GetTarget ("Global | Help | Object | Menu") into mController
    if exists (mController) is false then put scriptEditor_Object() into mController
    _Init mController
    return mController
 end menu_Target
+
+getprop uploadGraph_Params [sObject]
+   return empty
+end uploadGraph_Params
 
 private command _Init mController
    put env_ProjectIsActive ("lcw_Wiki") into helpActive   
@@ -28,45 +32,11 @@ private command _Init mController
    put helpActive into LocalArray ["helpActive"]
 end _Init
 
--- getprop disabed_UpdateHelp
-switch
-   case LocalArray ["helpURL"] is empty
-   case LocalArray ["helpActive"] is false
-      return "delete"
-   default
-      return false
-end switch
-end disabed_UpdateHelp
 
--- getprop disabled_Help
-switch
-   case LocalArray ["helpURL"] is empty
-   case LocalArray ["helpActive"] is false
-      return "delete"
-   default
-      return false
-end switch
-end disabled_Help
-
--- getprop disabled_RecreateHelp
-if the shiftKey is "Down" then return false
-switch
-   case LocalArray ["helpURL"] is not empty
-   case LocalArray ["helpActive"] is false
-      return "delete"
-   default
-      return false
-end switch
-end disabled_RecreateHelp
-
-
---> Global | Script | Help | Menu
+--> Global | Help | Object | Menu
 -
 on menu_Help sObject
    launch_ObjectHelp sObject
-   if the result is empty then
-      menu_RecreateObjectHelp sObject
-   end if
 end menu_Help
 
 on menu_ProjectHelp sObject
@@ -100,7 +70,3 @@ end menu_UpdateObjectHelp
 on menu_UploadGraph sObject, sGraph
    breakPoint
 end menu_UploadGraph
-
-getprop uploadGraph_Params [sObject]
-   return empty
-end uploadGraph_Params
