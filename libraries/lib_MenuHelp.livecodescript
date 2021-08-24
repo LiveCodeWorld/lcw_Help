@@ -13,19 +13,41 @@ This library is for creating and displaying help for LCW menus in wiki.
 
 --> Working on
 -
--- getprop menu_Markdown
-put the long id of the target into mController
-put the menu_GlobalTitle of mController into gMenuTitle
-put help_ConstructMenuMarkdown (gMenuTitle, mController) into someMarkdown
-return mController
-end menu_Markdown
-
-getprop help_MenuPageArray
-   put the long id of the target into mController
-   put the menu_GlobalTitle of mController into gMenuTitle
-   put help_FetchMenuPageArray (gMenuTitle, mController) into pageArray
+function help_CreateMenuPageArray gMenuTitle, mController, pHow
+   put menu_StripGlobal (gMenuTitle) into pageTitle
+   
+   # Fetch template
+   put pageArray_Fetch ("menu.livecode.world", "menu-template") into pageArray
+   
+   # Add forks, rename and tidy
+   help_RenameTemplate pageArray, pageTitle, wikiDomain
+   
+   # Replace Menu section
+   put help_ConstructMenuStory (gMenuTitle, pHow, mController) into storyArray
+   pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
+   --
    return pageArray
-end help_MenuPageArray
+end help_CreateMenuPageArray
+
+private command help_MenuMergeAndStore pageArray, mController
+   # Curly merge
+   put help_ObjectCurlyData (mController, "menu") into curlyData
+   curly_MergePageArray pageArray, curlyData
+   
+   # Store
+   help_StoreMenuPageArray pageArray
+   return the result
+end help_MenuMergeAndStore
+
+command help_StoreMenuPageArray pageArray
+   put pageArray ["title"] into pageTitle -- could get from stackName?
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put help_ConstructDomain ("menu") into wikiDomain
+   --
+   pageArray_Store wikiDomain, pageSlug, pageArray
+   put the result into shellResult -- url
+   return shellResult
+end help_StoreMenuPageArray
 
 function help_ConstructMenuStory gMenuTitle, pHow, pMenuController
    # Find the mController
@@ -79,6 +101,13 @@ end help_FetchMenuTemplate
 
 --> Props
 -
+getprop help_MenuPageArray
+   put the long id of the target into mController
+   put the menu_GlobalTitle of mController into gMenuTitle
+   put help_FetchMenuPageArray (gMenuTitle, mController) into pageArray
+   return pageArray
+end help_MenuPageArray
+
 getprop menu_PermalinkMarkdown [pFast]
    -- pFast can be true, false, or gMenutitle
    put the long id of the target into mController
@@ -168,7 +197,7 @@ command help_CreateMenuPage gMenuTitle, pMenuController
    --
    put help_CreateMenuPageArray (gMenuTitle, pMenuController, "links") into pageArray
    if pageArray is empty then return empty
-   help_MenuMergeAndStore pMenuController, pageArray
+   help_MenuMergeAndStore pageArray, pMenuController
    --
    if item 1 of the result = "Error" then
       return the result
@@ -203,26 +232,10 @@ command help_UpdateMenu gMenuTitle, pHow, pMenuController
    put help_ConstructMenuStory (gMenuTitle, pHow, pMenuController) into storyArray
    pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
    --
-   help_MenuMergeAndStore pMenuController, pageArray
+   help_MenuMergeAndStore pageArray, pMenuController
    --
    return the result
 end help_UpdateMenu
-
-function help_CreateMenuPageArray gMenuTitle, mController, pHow
-   put menu_StripGlobal (gMenuTitle) into pageTitle
-   
-   # Fetch template
-   put pageArray_Fetch ("menu.livecode.world", "menu-template") into pageArray
-   
-   # Add forks, rename and tidy
-   help_RenameTemplate pageArray, pageTitle, wikiDomain
-   
-   # Replace Menu section
-   put help_ConstructMenuStory (gMenuTitle, pHow, mController) into storyArray
-   pageArray_ReplaceSection pageArray, "Menu", storyArray
-   --
-   return pageArray
-end help_CreateMenuPageArray
 
 function help_FetchMenuHelpArray gMenuTitle
    -- fetch wiki-page in "menu.livecode.world"
@@ -247,26 +260,6 @@ command help_MenuItemMergeAndStore hKey, menuSubDomain, pageArray, pUpdate
       return shellResult
    end if
 end help_MenuItemMergeAndStore
-
-private command help_MenuMergeAndStore mController, pageArray
-   put pageArray ["title"] into pageTitle -- could get from stackName ?
-   --
-   put help_ConstructDomain ("menu") into wikiDomain
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   --
-   put help_ObjectCurlyData (mController, "menu") into curlyData
-   curly_MergePageArray pageArray, curlyData
-   
-   # Store
-   -- help_CreatePageArray pageArray, "menu"
-   pageArray_Store wikiDomain, pageSlug, pageArray
-   put the result into shellResult -- url
-   if item 1 of shellResult is "Error" then
-      return shellResult
-   else
-      return pageArray
-   end if
-end help_MenuMergeAndStore
 
 
 --> Help | Launch
