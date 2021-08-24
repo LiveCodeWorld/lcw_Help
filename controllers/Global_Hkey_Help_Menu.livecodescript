@@ -144,28 +144,45 @@ on menu_UpdateHelpGraph hKey, shortFile
          put item 1 of shortFile into graphStyle
          put hkey_GetDotText (hKey, graphStyle) into dotText
          --
-         put help_FetchHandlerPageArray (hKey) into pageArray
+         put help_FetchHkeyPageArray (hKey) into pageArray
          pageArray_ReplaceGraph pageArray, dotText
          --
-         help_StoreHandlerPageArray hKey, pageArray
+         help_StoreHkeyPageArray hKey, pageArray
          --
          launch_HkeyHelp hKey
    end switch
 end menu_UpdateHelpGraph
 
-on menu_UpdateCode hKey
-   put help_FetchHandlerPageArray (hKey) into pageArray
-   put pageArray_FindFirstSectionItem ("Handler", "code", pageArray) into itemNum
+on menu_UpdateHandler hKey
+   help_UpdateHandler hKey
+   put the result into foundHandler
    --
-   if itemNum > 0 then
-      put hkey_FetchHandler (hKey) into someHandler
-      pageArray_EditItem pageArray, someHandler, itemNum
-      help_StoreHandlerPageArray hKey, pageArray
-   else
+   if foundHandler is empty then
       put LocalArray ["tObject"] into tObject
       lcw_AnswerWarning "Could not locate 'code' section of handler page '[[hKey]]'!", tObject, hKey
+   else
+      launch_HkeyHelp hKey
    end if
-end menu_UpdateCode
+end menu_UpdateHandler
+
+on _UpdateHandlerCode hKey
+   help_UpdateHandlerCode hKey
+   put the result into foundHandler
+   --
+   if foundHandler is empty then
+      put LocalArray ["tObject"] into tObject
+      lcw_AnswerWarning "Could not locate 'code' section of handler page '[[hKey]]'!", tObject, hKey
+   else
+      launch_HkeyHelp hKey
+   end if
+end _UpdateHandlerCode
+
+on _UpdateCalls hKey
+   help_UpdateHandlerCalls hKey
+   put the result into mdCalls
+   --
+   launch_HkeyHelp hKey
+end _UpdateCalls
 
 on menu_UpdateMetadata hKey
    switch
@@ -204,6 +221,20 @@ end submenu_Dev
 
 --> Dev | Menu
 -
+on menu_FetchGraphJson hkey
+   put dot_GetArray (hkey) into dotArray
+   display_Data dotArray, hkey
+   
+   -- finder_Reveal someFile
+   
+   -- put help_FetchHkeyPageArray (hKey) into pageArray
+   -- put pageArray_GetGraph (pageArray) into dotText
+   -- put dot_Convert (dotText) into dotJSON
+   --
+   --  display_JSON dotJSON, "dotJSON"
+   -- put dotJSON
+end menu_FetchGraphJson
+
 on _DisplayVersions hKey
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    put the result into shortHkey

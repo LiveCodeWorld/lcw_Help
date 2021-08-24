@@ -96,8 +96,14 @@ on menu_StoreMenuWelcomeVisitors sObject
    put help_ConstructMenuWikiDomain (gMenuTitle) into menuWikiDomain
    --  
    # Fetch, rename and store menu pageArray from "menu.livecode.world"
-   put help_FetchMenuWikiPageArray (gMenuTitle, mController, menuWikiDomain) into menuPageArray
-   pageArray_Store menuWikiDomain, "welcome-visitors", menuPageArray
+   put help_FetchMenuPageArray (gMenuTitle, mController, menuWikiDomain) into pageArray
+   
+   # Add forks, rename and tidy
+   help_RenameTemplate pageArray, "Welcome Visitors", menuWikiDomain
+   
+   # Store
+   breakpoint
+   pageArray_Store menuWikiDomain, "welcome-visitors", pageArray
    --
    menu_LaunchMenuWiki mController
 end menu_StoreMenuWelcomeVisitors

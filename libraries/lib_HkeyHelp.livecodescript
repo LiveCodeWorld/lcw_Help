@@ -34,22 +34,6 @@ getprop script_MarkdownHandlerIndex
    return markdownIndex
 end script_MarkdownHandlerindex
 
-command help_IndentHandler @someHandler
-   put word 1 to -1 of someHandler into someHandler
-   repeat for each line hLine in someHandler
-      put word 1 to -1 of hLine into goodLine
-      put offset (goodLine, hLine) into spaceNum
-      if spaceNum = 1 then
-         put goodLine & CR after goodHandler
-      else
-         put round (spaceNum/2) into newSpaceNum
-         put char 1 to newSpaceNum of hLine & goodLine & CR after goodHandler
-      end if
-   end repeat
-   delete char -1 of goodHandler
-   put goodHandler into someHandler
-end help_IndentHandler
-
 
 --> Hkey | Help
 -
@@ -73,7 +57,7 @@ command help_CreateFromHkey hKey, pScriptHelp
 end help_CreateFromHkey
 
 function help_GetHkeyTags hKey
-   put help_FetchHandlerPageArray (hKey) into pageData
+   put help_FetchHkeyPageArray (hKey) into pageData
    _SetHkeyPageItemDictionary pageData
    --
    put pageData_GetText (pageData, "handlerTags") into handlerTags
@@ -120,7 +104,7 @@ function help_HkeyCurlyData hKey, pUpdate
    _SetHkeyPageItemDictionary curlyData
    --
    put hkey_FetchHandler (hKey) into someHandler
-   help_IndentHandler someHandler
+   help_TidyHandler someHandler
    curly_SetData curlyData, "someHandler", someHandler
    --
    put hkey_GetDotText (hKey) into dotText
@@ -134,7 +118,7 @@ function help_HkeyCurlyData hKey, pUpdate
    put _ConstructHandlerSyntax (someHandler, hKey) into handlerSyntax
    curly_SetData curlyData, "handlerSyntax", handlerSyntax
    --
-   put _ConstructCallList (someHandler, hKey) into callList
+   put _ConstructCallList (someHandler) into callList
    curly_SetData curlyData, "callList", callList
    --
    put _ConstructParamList (someHandler) into paramList
@@ -147,20 +131,34 @@ function help_HkeyCurlyData hKey, pUpdate
 end help_HkeyCurlyData
 
 
+--> Help | pageArray | Set
+-
+command help_SetPageArrayCalls @pageArray, hKey, pHandler
+   put pageArray_FindFirstSectionItem ("Calls", "markdown", pageArray) into itemNum
+   if itemNum = 0 then return empty
+   if pHandler is empty then
+      put hkey_FetchHandler (hKey) into pHandler
+   end if
+   --
+   put _ConstructCallList (pHandler) into mdCalls
+   --
+   pageArray_EditItem pageArray, mdCalls, itemNum
+   return mdCalls
+end help_SetPageArrayCalls
+
+command help_SetPageArrayHandler @pageArray, hKey
+   put pageArray_FindFirstSectionItem ("Handler", "code", pageArray) into itemNum
+   if itemNum = 0 then return empty
+   
+   put hkey_FetchHandler (hKey) into someHandler
+   help_TidyHandler someHandler
+   pageArray_EditItem pageArray, someHandler, itemNum
+   return someHandler
+end help_SetPageArrayHandler
+
+
 --> Private
 -
-private command _SetHkeyPageItemDictionary @curlyData
-   curly_SetItemIDArray curlyData, "refArray", "4ecda1442570d900"
-   curly_SetItemIDArray curlyData, "someHandler", "39e7dd9a1560241a"
-   curly_SetItemIDArray curlyData, "handlerSyntax", "54f306e694aa494b"
-   curly_SetItemIDArray curlyData, "handlerMetadata", "da8cf69872f38050"
-   curly_SetItemIDArray curlyData, "callList", "0c0d997d16532d79"
-   curly_SetItemIDArray curlyData, "handlerTags", "26d290f03f2aa26e"
-   curly_SetItemIDArray curlyData, "dotText", "b6853287820608f3"
-   curly_SetItemIDArray curlyData, "paramList", "0a99c44502e29156"
-   curly_SetItemIDArray curlyData, "githubPara", "8869c0772777be8e"
-end _SetHkeyPageItemDictionary
-
 private function _ConstructHandlerTags hKey, pUpdate
    -- used by "help_HkeyCurlyData()"
    local handlerTagList
@@ -225,28 +223,24 @@ private function _ConstructHandlerSyntax someHandler, hKey
    return handlerSyntax
 end _ConstructHandlerSyntax
 
-private function _ConstructCallList someHandler, hKey
-   -- we store them as we find them - because we can
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the handler_PublicCalls [hKey] of hObject into shortPublicCalls
-   
-   # Extract calls from handler (and store them)
+private function _ConstructCallList someHandler
+   # Extract calls from handler
    put handler_ExtractCalls (someHandler) into shortCalls
-   hkey_StoreCalls hKey, shortCalls
-   -- put hkey_FetchCalls (hKey) into shortCalls
+   -- hkey_StoreCalls hKey, shortCalls
+   -- put the handler_PublicCalls [hKey] of hObject into shortCalls
    
-   # Construct list
-   repeat for each line shortCall in shortPublicCalls
-      put word 2 of shortCall & CR after callNames
-   end repeat
-   delete char -1 of callNames
-   put fedwiki_MarkdownIndex (callNames) into callList
-   
-   # If empty
-   if callList is empty then
+   # Default text if empty
+   if shortCalls is empty then
       return "There are no calls for this handler."
    end if
-   return callList
+   
+   # Construct list
+   repeat for each line shortCall in shortCalls
+      put word 2 of shortCall into hName
+      put "- [[" & hName & "]]" & CR after markdownList
+   end repeat
+   delete char -1 of markdownList
+   return markdownList
 end _ConstructCallList
 
 private function _ConstructParamList someHandler
@@ -262,3 +256,15 @@ private function _ConstructParamList someHandler
    delete char -1 of paramTable
    return paramTable
 end _ConstructParamList
+
+private command _SetHkeyPageItemDictionary @curlyData
+   curly_SetItemIDArray curlyData, "refArray", "4ecda1442570d900"
+   curly_SetItemIDArray curlyData, "someHandler", "39e7dd9a1560241a"
+   curly_SetItemIDArray curlyData, "handlerSyntax", "54f306e694aa494b"
+   curly_SetItemIDArray curlyData, "handlerMetadata", "da8cf69872f38050"
+   curly_SetItemIDArray curlyData, "callList", "0c0d997d16532d79"
+   curly_SetItemIDArray curlyData, "handlerTags", "26d290f03f2aa26e"
+   curly_SetItemIDArray curlyData, "dotText", "b6853287820608f3"
+   curly_SetItemIDArray curlyData, "paramList", "0a99c44502e29156"
+   curly_SetItemIDArray curlyData, "githubPara", "8869c0772777be8e"
+end _SetHkeyPageItemDictionary

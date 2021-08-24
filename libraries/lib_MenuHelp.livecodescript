@@ -11,8 +11,44 @@ version: 0.1
 This library is for creating and displaying help for LCW menus in wiki.
 */
 
---> To Organise
+--> Working on
 -
+-- getprop menu_Markdown
+put the long id of the target into mController
+put the menu_GlobalTitle of mController into gMenuTitle
+put help_ConstructMenuMarkdown (gMenuTitle, mController) into someMarkdown
+return mController
+end menu_Markdown
+
+getprop help_MenuPageArray
+   put the long id of the target into mController
+   put the menu_GlobalTitle of mController into gMenuTitle
+   put help_FetchMenuPageArray (gMenuTitle, mController) into pageArray
+   return pageArray
+end help_MenuPageArray
+
+function help_FetchMenuPageArray gMenuTitle, mController
+   put help_FetchMenuTemplate (gMenuTitle, mController) into pageArray
+   -- 
+   put help_ConstructMenuStory (gMenuTitle, "reference", mController) into storyArray
+   -- put the menu_PermalinkMarkdown of mController into sMarkdown
+   -- get storyArray_ConstructItem (sMarkdown, "markdown")
+   -- put it into storyArray[1]
+   --
+   pageArray_ReplaceSectionBody pageArray, "Menu", storyArray
+   return pageArray
+end help_FetchMenuPageArray
+
+function help_FetchMenuTemplate gMenuTitle, mController
+   put "menu.livecode.world" into wikiDomain
+   put help_ConstructMenuPageTitle (gMenuTitle) into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   --
+   put pageArray_Fetch (wikiDomain, pageSlug) into pageArray
+   if pageArray is empty then return merge ("Error, there is no page '[[pageTitle]]' on menu.livecode.world to clone!")
+   return pageArray
+end help_FetchMenuTemplate
+
 
 --> Props
 -
@@ -143,7 +179,7 @@ function help_ConstructMenuStory gMenuTitle, pHow, pMenuController
    if exists (pMenuController) is false then return empty
    
    put the menu_Handlers [gMenuTitle] of pMenuController into mHandlers
-   put help_ConstructHandlerStory (mHandlers, pHandlerObject) into pageArray
+   put help_ConstructHandlerStory (mHandlers, pMenuController) into pageArray
    
    return pageArray ["story"]
 end help_ConstructMenuStory
@@ -225,22 +261,6 @@ end help_ConstructHandlerStory
 
 --> Help | Menu | Wiki
 -
-function help_FetchMenuWikiPageArray gMenuTitle, mController, pWikiDomain
-   put help_ConstructMenuStory (gMenuTitle, "reference", mController) into storyArray
-   --
-   put help_ConstructMenuPageTitle (gMenuTitle) into menuPageTitle
-   put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
-   put pageArray_Fetch ("menu.livecode.world", menuPageSlug) into menuPageArray
-   if menuPageArray is empty then return merge ("Error, there is no page [[menuPageSlug]] on menu.livecode.world to clone")
-   --
-   pageArray_ReplaceSectionBody menuPageArray, "Menu", storyArray
-   --
-   # Add forks, rename and tidy
-   help_RenameTemplate menuPageArray, "Welcome Visitors", pWikiDomain
-   --
-   return menuPageArray
-end help_FetchMenuWikiPageArray
-
 function help_ConstructMenuWikiDomain gMenuTitle
    put menu_StripGlobal (gMenuTitle) into pageTitle
    put help_MenuWikiDomain (pageTitle) into menuSubDomain
