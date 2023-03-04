@@ -143,6 +143,7 @@ on menu_UpdateHelpGraph hKey, shortFile
          set the itemdelimiter to "."
          put item 1 of shortFile into graphStyle
          put hkey_GetDotText (hKey, graphStyle) into dotText
+         dot_AddLayout dotText, graphStyle
          --
          put help_FetchHkeyPageArray (hKey) into pageArray
          pageArray_ReplaceGraph pageArray, dotText

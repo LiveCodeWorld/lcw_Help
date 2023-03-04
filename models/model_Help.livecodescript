@@ -17,7 +17,7 @@ We define a new concept "handerArray" to mean a "pageArray" for handlers.
 
 function help_FetchHkeyPageArray hKey
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   return help_FetchHkeyPageArray (hName)
+   return help_FetchHandlerPageArray (hName)
 end help_FetchHkeyPageArray
 
 command help_StoreHkeyPageArray hKey, pageArray
@@ -33,13 +33,13 @@ function help_FetchHandlerPageArray hName
    return pageArray
 end help_FetchHandlerPageArray
 
-command help_StoreHkeyPageArray hName, pageArray
+command help_StoreHandlerPageArray hName, pageArray
    put fedwiki_ConstructSlug (hName) into pageSlug
    --
    pageArray_Store "handler.livecode.world", pageSlug, pageArray
    put the result into shellResult
    return shellResult
-end help_StoreHkeyPageArray
+end help_StoreHandlerPageArray
 
 function help_FetchObjectPageArray sObject
    _ObjectDomainInfo sObject, pageTitle, pageSlug, wikiDomain

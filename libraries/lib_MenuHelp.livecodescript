@@ -13,6 +13,19 @@ This library is for creating and displaying help for LCW menus in wiki.
 
 --> Working on
 -
+command ask_CreateMenuPage mController, pDisplayView
+   put the name of mController into oName
+   if pDisplayView is empty then
+      put rev_ScriptEditorStack () into pDisplayView
+   end if
+   get "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page."
+   lcw_Answer it, pDisplayView, oName
+   
+   help_CreateMenuFromController mController
+   put the result into helpURL
+   return helpURL
+end ask_CreateMenuPage
+
 function help_CreateMenuPageArray gMenuTitle, mController, pHow
    put menu_StripGlobal (gMenuTitle) into pageTitle
    
@@ -166,19 +179,6 @@ command launch_MenuControllerHelp mController, pDisplayView
    put the result into helpURL
    return helpURL
 end launch_MenuControllerHelp
-
-command ask_CreateMenuPage mController, pDisplayView
-   put the name of mController into oName
-   if pDisplayView is empty then
-      put rev_ScriptEditorStack () into pDisplayView
-   end if
-   get "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page."
-   lcw_Answer it, pDisplayView, oName
-   
-   help_CreateMenuFromController mController
-   put the result into helpURL
-   return helpURL
-end ask_CreateMenuPage
 
 command help_CreateMenuFromController mController
    put the menu_GlobalTitle of mController into gMenuTitle
