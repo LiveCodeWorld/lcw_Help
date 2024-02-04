@@ -18,10 +18,6 @@ getprop menu_Target [tObject]
    return mController
 end menu_Target
 
-getprop uploadGraph_Params [sObject]
-   return empty
-end uploadGraph_Params
-
 private command _Init mController
    put env_ProjectIsActive ("lcw_Wiki") into helpActive   
    if helpActive then
@@ -67,6 +63,17 @@ on menu_UpdateObjectHelp sObject
    launch_ObjectHelp sObject
 end menu_UpdateObjectHelp
 
-on menu_UploadGraph sObject, sGraph
-   breakPoint
-end menu_UploadGraph
+getprop disabled_CreateHelpWiki [sObject]
+   put the help_Domain of sObject into wikiDomain
+   put wiki_GetFolder (wikiDomain) is not empty into wikiExists
+   return wikiExists
+end disabled_CreateHelpWiki
+
+on menu_CreateHelpWiki sObject
+   put the help_Domain of sObject into wikiDomain
+   put lcw_Ask ("Create new wiki...", wikiDomain, "New Wiki") into wikiDomain
+   --
+   wikiServer_Create wikiDomain
+   display_LocalWikis "", "", "*livecode.world"
+end menu_CreateHelpWiki
+

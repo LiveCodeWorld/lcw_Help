@@ -13,8 +13,29 @@ lcw_Help uses the livecode.world federated wiki to store it's help.
 As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 */
 
+--> Working on
+-
+function help_FetchTemplateJson scriptType
+   put help_ConstructDomain (scriptType) into fedwikiDomain
+   _FixScriptType scriptType
+   put scriptType & "-" & "template" into pageSlug
+   put pageJson_Fetch (fedwikiDomain, pageSlug) into pageJSON
+   return pageJSON
+end help_FetchTemplateJson
+
+function _ForkDomainItems
+   return "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,project.livecode.world,fedwiki.org"
+end _ForkDomainItems
+
+
 --> Props
 -
+getprop help_Domain
+   put the script_Type of the target into scriptType
+   put help_ConstructDomain (scriptType) into wikiDomain
+   return wikiDomain
+end help_Domain
+
 getprop help_Url [pCheckURL]
    put the long id of the target into tObject
    put the stack_Name of tObject into stackName
@@ -22,13 +43,6 @@ getprop help_Url [pCheckURL]
    put help_ConstructURL (stackName, scriptType, pCheckURL) into someURL
    return someURL
 end help_Url
-
-
---> Working on
--
-function _ForkDomainItems
-   return "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,project.livecode.world,fedwiki.org"
-end _ForkDomainItems
 
 
 --> Help | Tags
@@ -69,16 +83,8 @@ function help_FetchTemplateArray scriptType, pStripJournal
    return templateArray
 end help_FetchTemplateArray
 
-function help_FetchTemplateJson scriptType
-   put help_ConstructDomain (scriptType) into fedwikiDomain
-   _FixScriptTyle scriptType
-   put scriptType & "-" & "template" into pageSlug
-   put pageJson_Fetch (fedwikiDomain, pageSlug) into pageJSON
-   return pageJSON
-end help_FetchTemplateJson
-
 function help_ConstructDomain scriptType
-   _FixScriptTyle scriptType
+   _FixScriptType scriptType
    put scriptType & ".livecode.world" into wikiDomain
    return wikiDomain
 end help_ConstructDomain
@@ -110,7 +116,7 @@ command help_CreateFromObject sObject
          put the result into shellResult
          return shellResult
    end switch
-end help_CreateFromObject 
+end help_CreateFromObject
 
 command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    # Construct
@@ -136,7 +142,7 @@ command help_CreatePageArray pageArray, scriptType
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    
    # Store
-   pageArray_Store helpDomain, pageSlug, pageArray
+   pageArray_Set helpDomain, pageSlug, pageArray
    put the result into shellResult
    if item 1 of shellResult is "error" then
       return shellResult
@@ -313,7 +319,7 @@ private command _AddGitHubObjectCurlyData @curlyData, sObject
    put merge (githubPara) into curlyData ["id"]["8869c0772777be8e"]
 end _AddGitHubObjectCurlyData
 
-private command _FixScriptTyle @scriptType
+private command _FixScriptType @scriptType
    switch scriptType
       case "home"
          put "project" into scriptType
@@ -322,4 +328,4 @@ private command _FixScriptTyle @scriptType
          put "menu" into scriptType
          break
    end switch
-end _FixScriptTyle
+end _FixScriptType

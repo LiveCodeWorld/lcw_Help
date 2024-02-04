@@ -117,7 +117,7 @@ command transport_CreateRouteWelcomeHelp routeHkey
          curly_MergePageArray pageArray, curlyData
    end switch
    --
-   pageArray_Store rootDomain, "welcome-visitors", pageArray
+   pageArray_Set rootDomain, "welcome-visitors", pageArray
    return pageArray
 end transport_CreateRouteWelcomeHelp
 
@@ -132,7 +132,7 @@ command transport_CreateRouteHelp hKey
    pageArray_StripJournal pageArray
    pageArray_AddFork pageArray, "transport.livecode.world,handler.livecode.world,library.livecode.world,model.livecode.world,fedwiki.org"
    --
-   pageArray_Store wikiDomain, pageSlug, pageArray
+   pageArray_Set wikiDomain, pageSlug, pageArray
    put the result into shellResult
    return shellResult
 end transport_CreateRouteHelp
@@ -178,7 +178,7 @@ end transport_FetchHkeyHelpPageArray
 
 command transport_StoreHkeyHelpPageArray hKey, pageArray
    _TransportInfo hKey, wikiDomain, pageTitle, pageSlug, hObject
-   pageArray_Store wikiDomain, pageSlug, pageArray
+   pageArray_Set wikiDomain, pageSlug, pageArray
    put the result into shellResult
    return shellResult
 end transport_StoreHkeyHelpPageArray

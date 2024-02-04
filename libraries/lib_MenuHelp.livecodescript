@@ -57,7 +57,7 @@ command help_StoreMenuPageArray pageArray
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    put help_ConstructDomain ("menu") into wikiDomain
    --
-   pageArray_Store wikiDomain, pageSlug, pageArray
+   pageArray_Set wikiDomain, pageSlug, pageArray
    put the result into shellResult -- url
    return shellResult
 end help_StoreMenuPageArray
@@ -252,7 +252,7 @@ command help_MenuItemMergeAndStore hKey, menuSubDomain, pageArray, pUpdate
    put help_HkeyCurlyData (hKey, pUpdate) into curlyData
    curly_MergePageArray pageArray, curlyData
    --
-   pageArray_Store menuSubDomain, pageSlug, pageArray
+   pageArray_Set menuSubDomain, pageSlug, pageArray
    put the result into shellResult
    if shellResult is empty then
       return pageArray

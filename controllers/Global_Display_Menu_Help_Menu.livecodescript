@@ -103,7 +103,7 @@ on menu_StoreMenuWelcomeVisitors sObject
    
    # Store
    breakpoint
-   pageArray_Store menuWikiDomain, "welcome-visitors", pageArray
+   pageArray_Set menuWikiDomain, "welcome-visitors", pageArray
    --
    menu_LaunchMenuWiki mController
 end menu_StoreMenuWelcomeVisitors

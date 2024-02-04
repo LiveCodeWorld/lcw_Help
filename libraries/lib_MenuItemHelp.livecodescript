@@ -90,7 +90,7 @@ command help_UpdateMenuItem hKey
    put help_HkeyCurlyData (hKey, true) into curlyData
    curly_MergePageArray hkeyPageArray, curlyData
    --
-   pageArray_Store menuSubDomain, hkeySlug, hkeyPageArray
+   pageArray_Set menuSubDomain, hkeySlug, hkeyPageArray
    return hkeyPageArray
 end help_UpdateMenuItem
 
@@ -123,7 +123,7 @@ command help_CreateMenuItem hKey, pScriptHelp
    put help_HkeyCurlyData (hKey, false) into hkeyCurlyData
    put help_FetchNewPageArray (hkeyPageTitle, "handler", hkeyCurlyData, pScriptHelp) into hkeyPageArray
    --
-   pageArray_Store menuSubDomain, hkeySlug, hkeyPageArray
+   pageArray_Set menuSubDomain, hkeySlug, hkeyPageArray
    return the result
 end help_CreateMenuItem
 
@@ -154,7 +154,7 @@ command help_CreateMenuWikiDomain hKey
    pageArray_StripJournal menuPageArray
    pageArray_AddFork menuPageArray, "handler.livecode.world,model.livecode.world,fedwiki.org"
    --
-   pageArray_Store menuSubDomain, "welcome-visitors", menuPageArray
+   pageArray_Set menuSubDomain, "welcome-visitors", menuPageArray
    --
    if the result is empty then
       return menuPageArray

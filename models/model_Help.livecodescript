@@ -36,7 +36,7 @@ end help_FetchHandlerPageArray
 command help_StoreHandlerPageArray hName, pageArray
    put fedwiki_ConstructSlug (hName) into pageSlug
    --
-   pageArray_Store "handler.livecode.world", pageSlug, pageArray
+   pageArray_Set "handler.livecode.world", pageSlug, pageArray
    put the result into shellResult
    return shellResult
 end help_StoreHandlerPageArray
@@ -49,7 +49,7 @@ end help_FetchObjectPageArray
 
 command help_StoreObjectPageArray sObject, pageArray
    _ObjectDomainInfo sObject, pageTitle, pageSlug, wikiDomain
-   pageArray_Store wikiDomain, pageSlug, pageArray
+   pageArray_Set wikiDomain, pageSlug, pageArray
    return the result
 end help_StoreObjectPageArray
 
