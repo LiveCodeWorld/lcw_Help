@@ -143,12 +143,9 @@ command help_CreatePageArray pageArray, scriptType
    
    # Store
    pageArray_Set helpDomain, pageSlug, pageArray
-   put the result into shellResult
-   if item 1 of shellResult is "error" then
-      return shellResult
-   else
-      return pageArray
-   end if
+   put the result into wikiFile
+   wikiSiteMap_Create helpDomain
+   return wikiFile
 end help_CreatePageArray
 
 function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
