@@ -17,11 +17,11 @@ command display_HelpDraft sObject
    put the help_PageArray of sObject into helpPageArray
    --
    -- display_PageArray helpPageArray
-   put "livecode.world" into wikiDomain
-   --
+   -- put "livecode.world" into wikiDomain
+   
+   put the help_Domain of sObject into wikiDomain
    put display_ListWikiBrowsers (wikiDomain) into lcwBrowser
    if exists (lcwBrowser) is false then
-      breakpoint
       display_Wiki wikiDomain
       put the result into lcwBrowser
    end if
