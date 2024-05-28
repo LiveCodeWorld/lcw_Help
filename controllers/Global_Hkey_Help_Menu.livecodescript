@@ -88,23 +88,13 @@ getprop updateHelpGraph_Params [hKey]
    return shortFiles
 end updateHelpGraph_Params
 
-
---> Global | Hkey | Help | Menu
--
-on menu_HandlerHelp hKey
-   launch_HkeyHelp hKey
-   if the result is empty then
-      _RecreateHelp hKey
-   end if
-end menu_HandlerHelp
-
-on _RecreateHelp hKey
+private command _RecreateHelp hKey
    hkeyLine_Deconstruct hKey, hName, hType, hObject
    -- put LocalArray ["tObject"] into tObject
    put rev_ScriptEditorStack () into editorStack
    --
    lcw_Answer "Are you sure you wish to create the wiki help page for handler '[[hName]]'? This will overwrite any existing page.", editorStack, hName
-   
+   --
    ask_PushGithub hObject
    --
    help_CreateFromHkey hKey
@@ -115,6 +105,16 @@ on _RecreateHelp hKey
       launch_HkeyHelp hKey
    end if
 end _RecreateHelp
+
+
+--> Global | Hkey | Help | Menu
+-
+on menu_HandlerHelp hKey
+   launch_HkeyHelp hKey
+   if the result is empty then
+      _RecreateHelp hKey
+   end if
+end menu_HandlerHelp
 
 on _
 end _
@@ -216,41 +216,5 @@ on menu_MenuHandlerHelp hKey
 end menu_MenuHandlerHelp
 
 on submenu_Dev
-   return "Dev | Menu"
+   return menu_DevTitle ("Global | Hkey | Help | Menu")
 end submenu_Dev
-
-
---> Dev | Menu
--
-on menu_FetchGraphJson hkey
-   put dot_GetArray (hkey) into dotArray
-   display_Data dotArray, hkey
-   
-   -- finder_Reveal someFile
-   
-   -- put help_FetchHkeyPageArray (hKey) into pageArray
-   -- put pageArray_GetGraph (pageArray) into dotText
-   -- put dot_Convert (dotText) into dotJSON
-   --
-   --  display_JSON dotJSON, "dotJSON"
-   -- put dotJSON
-end menu_FetchGraphJson
-
-on _DisplayVersions hKey
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   put the result into shortHkey
-   --
-   put the github_Permalink [shortHkey] of hObject into webPermalink
-   --
-   launch url webPermalink
-end _DisplayVersions
-
-on _TestRawPermalink hKey
-   -- not working
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   put the result into shortHkey
-   --
-   put the github_RawPermalink of hObject into rawPermalink
-   --
-   launch url rawPermalink
-end _TestRawPermalink

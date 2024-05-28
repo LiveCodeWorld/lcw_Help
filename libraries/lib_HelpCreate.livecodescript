@@ -15,17 +15,24 @@ version: 0.1
 -
 command display_HelpDraft sObject
    put the help_PageArray of sObject into helpPageArray
-   --
-   -- display_PageArray helpPageArray
-   -- put "livecode.world" into wikiDomain
-   
+   -- comment 
    put the help_Domain of sObject into wikiDomain
    put display_ListWikiBrowsers (wikiDomain) into lcwBrowser
-   if exists (lcwBrowser) is false then
+   if exists (lcwBrowser) is true then
+      object_GoTo lcwBrowser
+   else
       display_Wiki wikiDomain
       put the result into lcwBrowser
+      wait 20 ticks
    end if
    --
+   put helpPageArray ["title"] into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put wikiFile_Construct (wikiDomain, pageSlug) into wikiFile
+   if there is a file wikiFile then
+      set the page_Title [wikiDomain] of lcwBrowser to pageTitle
+   end if
+   
    set the ghost_PageArray of lcwBrowser to helpPageArray
    return lcwBrowser
 end display_HelpDraft
@@ -53,30 +60,6 @@ getprop help_PageArray
    return pageArray
 end help_PageArray
    
-function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
-   put help_ConstructDomain (scriptType) into wikiDomain
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   put help_FetchTemplateArray (scriptType) into pageArray
-   if pageArray_Check (pageArray) is false then return empty
-   if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
-   --
-   help_RenameTemplate pageArray, pageTitle, wikiDomain
-   --
-   switch scriptType
-      case "transport"
-      default
-         curly_MergePageArray pageArray, curlyData
-         put curly_GetData (curlyData, "callList") into callList
-         if word 1 of callList is not "-" then
-            -- not a list
-            put pageArray_FindItemType ("graphviz", pageArray) into itemNum
-            pageArray_DeleteItem pageArray, itemNum
-         end if
-   end switch
-   --
-   return pageArray
-end help_FetchNewPageArray
-
 
 --> Help | Create
 -
@@ -136,6 +119,35 @@ command help_CreatePageArray pageArray, scriptType
    return wikiFile
 end help_CreatePageArray
 
-
---> Deps
--
+function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
+   put help_ConstructDomain (scriptType) into wikiDomain
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   
+   # Fetch Template
+   put help_FetchTemplateArray (scriptType) into pageArray
+   if pageArray_Check (pageArray) is false then return empty
+   if pScriptHelp is not empty then put pScriptHelp into pageArray ["story"][1]["text"]
+   --
+   help_RenameTemplate pageArray, pageTitle, wikiDomain
+   --
+   switch scriptType
+      case "transport"
+      default
+         curly_MergePageArray pageArray, curlyData
+         put curly_GetData (curlyData, "callList") into callList
+         if word 1 of callList is not "-" then
+            -- not a list
+            put pageArray_FindItemType ("graphviz", pageArray) into itemNum
+            pageArray_DeleteItem pageArray, itemNum
+         end if
+   end switch
+   
+   # Add Fork
+   pageArray_StripJournal pageArray
+   put url_GetTLD (wikiDomain) into tldDomains
+   put CR & "fedwiki.org" after tldDomains
+   pageArray_AddFork pageArray, tldDomains
+   --
+   
+   return pageArray
+end help_FetchNewPageArray

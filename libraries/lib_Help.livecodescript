@@ -23,9 +23,62 @@ function help_FetchTemplateJson scriptType
    return pageJSON
 end help_FetchTemplateJson
 
-function _ForkDomainItems
+private function _ForkDomainItems
    return "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,project.livecode.world,fedwiki.org"
 end _ForkDomainItems
+
+
+--> CurlyData
+-
+function help_RelatedStacks stackName
+   put word 1 to 3 of text_SplitCaps (stackName) into sFilter
+   replace space with empty in sFilter
+   put "*" after sFilter
+   --
+   put env_ListUsedStackNames() into modelsAndLibs
+   filter modelsAndLibs with sFilter
+   return modelsAndLibs
+end help_RelatedStacks
+
+function help_ObjectCurlyData sObject, scriptType
+   local curlyData
+   
+   # YAML
+   put the object_Yaml of sObject into curlyData ["all"]["objectYaml"]
+   
+   # Keywords
+   put the script_HandlerNames [true] of sObject into handlerNames
+   put help_GetTagItems (handlerNames) into curlyData ["all"]["keywordList"]
+   
+   # Related libraries and models
+   put the stack_Name of sObject into stackName
+   put help_RelatedStacks (stackName) into stackIndex
+   put markdown_LinkedBullets (stackIndex) into curlyData ["all"]["relatedBullets"]
+   
+   # Handlers and Calls
+   put the script_ExternalCalls of sObject into externalCalls
+   put fedwiki_MarkdownIndex (handlerNames) into curlyData ["all"]["handlerBullets"]
+   put fedwiki_HkeyMarkdownIndex (externalCalls) into curlyData ["all"]["externalCalls"]
+   
+   # Github
+   _AddGithubObjectCurlyData curlyData, sObject
+   
+   # Object
+   _AddObjectCurlyData curlyData, scriptType, sObject
+   
+    return curlyData
+end help_ObjectCurlyData
+
+private command _AddGitHubObjectCurlyData @curlyData, sObject
+   put the github_LaunchURL of sObject into objectLink
+   put objectLink into curlyData ["all"]["github_LaunchURL"]
+   put the github_ProjectURL of sObject into curlyData ["all"]["github_ProjectURL"]
+   --
+   put githubURL && "github" into githubLink
+   put the name of sObject into oName
+   put "View source code over at [" & objectLink && "github" & "]" into githubPara
+   put merge (githubPara) into curlyData ["all"]["githubPara"]
+end _AddGitHubObjectCurlyData
 
 
 --> Props
@@ -144,23 +197,6 @@ function help_ConstructURL stackName, scriptType, pCheckURL
    return someURL
 end help_ConstructURL
 
-function help_ObjectCurlyData sObject, scriptType
-   local curlyData
-   --   
-   put the object_Yaml of sObject into curlyData ["id"]["da8cf69872f38050"]
-   --
-   put the script_HandlerNames [true] of sObject into handlerNames
-   put the script_ExternalCalls of sObject into externalCalls
-   --
-   put fedwiki_MarkdownIndex (handlerNames) into curlyData ["id"]["5ac622dfbefa2589"]
-   put fedwiki_HkeyMarkdownIndex (externalCalls) into curlyData ["id"]["8b1940e31f034b01"]
-   --
-   _AddGithubObjectCurlyData curlyData, sObject
-   _AddObjectCurlyData curlyData, scriptType, sObject
-   --
-   return curlyData
-end help_ObjectCurlyData
-
 
 --> Private
 -
@@ -223,16 +259,6 @@ private command _AddObjectCurlyData @curlyData, scriptType, sObject
    
    return stackName
 end _AddObjectCurlyData
-
-private command _AddGitHubObjectCurlyData @curlyData, sObject
-   put the github_LaunchURL of sObject into objectLink
-   put objectLink into curlyData ["all"]["github link"]
-   put the github_ProjectURL of sObject into curlyData ["all"]["project link"]
-   --
-   put githubURL && "github" into githubLink
-   put "You can view the source for [[sObject]] on [" & objectLink && "github" & "]" into githubPara
-   put merge (githubPara) into curlyData ["id"]["8869c0772777be8e"]
-end _AddGitHubObjectCurlyData
 
 private command _FixScriptType @scriptType
    switch scriptType

@@ -204,7 +204,7 @@ end _TransportHkeyCurlyData
 
 private command _SetTransportWhere @curlyData, hKey
    _TransportInfo hKey, wikiDomain, pageTitle, pageSlug, hObject
-   put storyArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
+   put itemArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
    curly_SetReplaceArray curlyData, itemArray, "4ecda1442570d900"
 end _SetTransportWhere
 

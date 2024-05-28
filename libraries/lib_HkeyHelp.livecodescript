@@ -39,6 +39,7 @@ end script_MarkdownHandlerindex
 -
 command help_CreateFromHkey hKey, pScriptHelp
    put hkey_IsMenuHandler (hKey) into isMenuHandler
+   breakpoint
    switch
       case isMenuHandler is true
          help_CreateMenuItem hKey, pScriptHelp
@@ -98,7 +99,7 @@ function help_HkeyCurlyData hKey, pUpdate
    put hkey_GetType (hKey) into curlyData ["all"]["handlerType"]
    -- older style
    help_SetHkeyInfo hKey, wikiDomain, pageSlug, pageTitle
-   put storyArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
+   put itemArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
    curly_SetReplaceArray curlyData, itemArray, "4ecda1442570d900"
    --
    _SetHkeyPageItemDictionary curlyData
