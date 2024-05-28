@@ -64,7 +64,6 @@ end help_PageArray
 --> Help | Create
 -
 command help_CreateFromObject sObject
-   breakpoint
    put the script_Type of sObject into scriptType
    switch scriptType
       case "controller"
@@ -135,9 +134,7 @@ function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
       case "transport"
       default
          curly_MergePageArray pageArray, curlyData
-         dispay_Data curlyData, "Hanlder", "curlyData"
-         exit to top
-         
+         -- 
          put curly_GetData (curlyData, "callList") into callList
          if word 1 of callList is not "-" then
             -- not a list
@@ -152,6 +149,5 @@ function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
    put CR & "fedwiki.org" after tldDomains
    pageArray_AddFork pageArray, tldDomains
    --
-   
    return pageArray
 end help_FetchNewPageArray

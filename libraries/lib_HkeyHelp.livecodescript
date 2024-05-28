@@ -85,47 +85,35 @@ function help_HkeyCurlyData hKey, pUpdate
    local curlyData
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    --
-   put the stack_Name of hObject into stackName
-   put stackName into curlyData ["all"]["stackName"]
-   --
-   put the project_Name of hObject into projectName
-   put projectName into curlyData ["all"]["projectName"]
+   curly_SetAll curlyData, "stackName", the stack_Name of hObject
+   curly_SetAll curlyData, "projectName", the project_Name of hObject
    --  
-   put the github_Permalink [hKey] of hObject into curlyData ["all"]["githubPermalink"]
-   -- put the github_HandlerURL [hKey] of hObject into curlyData ["all"]["githubHandlerURL"]
-   put github_GetUrl (stackName) into curlyData ["all"]["githubObjectURL"]
-   --
-   put hkey_GetType (hKey) into curlyData ["all"]["handlerType"]
-   -- older style
-   help_SetHkeyInfo hKey, wikiDomain, pageSlug, pageTitle
-   put itemArray_ConstructReference (pageSlug, wikiDomain, wikiDomain, pageTitle) into itemArray
-   curly_SetReplaceArray curlyData, itemArray, "4ecda1442570d900"
-   --
-   _SetHkeyPageItemDictionary curlyData
-   --
+   curly_SetAll curlyData, "githubHandlerURL", the github_HandlerURL [hKey] of hObject
+   curly_SetAll curlyData, "githubPermalink", the github_Permalink [hKey] of hObject
+   curly_SetAll curlyData, "githubObjectURL", github_GetUrl (stackName)
+   curly_SetAll curlyData, "handlerType", hkey_GetType (hKey)
+   --   
    put hkey_FetchHandler (hKey) into someHandler
    help_TidyHandler someHandler
-   curly_SetData curlyData, "someHandler", someHandler
+   curly_SetAll curlyData, "someHandler", someHandler
    --
    put hkey_GetDotText (hKey) into dotText
-   if dotText is not empty then
-      curly_SetData curlyData, "dotText", dotText
-   end if
+   if dotText is not empty then curly_SetAll curlyData, "dotText", dotText
    --
    put _ConstructHandlerMetadata (hKey, projectName) into handlerMetadata
-   curly_SetData curlyData, "handlerMetadata", handlerMetadata
+   curly_SetAll curlyData, "handlerMetadata", handlerMetadata
    --
    put _ConstructHandlerSyntax (someHandler, hKey) into handlerSyntax
-   curly_SetData curlyData, "handlerSyntax", handlerSyntax
+   curly_SetAll curlyData, "handlerSyntax", handlerSyntax
    --
    put _ConstructCallList (someHandler) into callList
-   curly_SetData curlyData, "callList", callList
+   curly_SetAll curlyData, "callList", callList
    --
    put _ConstructParamList (someHandler) into paramList
-   curly_SetData curlyData, "paramList", paramList
+   curly_SetAll curlyData, "paramList", paramList
    --
    put _ConstructHandlerTags (hKey, pUpdate) into handlerTags -- also look inside handler
-   curly_SetData curlyData, "handlerTags", handlerTags
+   curly_SetAll curlyData, "handlerTags", handlerTags
    --
    return curlyData
 end help_HkeyCurlyData
@@ -256,15 +244,3 @@ private function _ConstructParamList someHandler
    delete char -1 of paramTable
    return paramTable
 end _ConstructParamList
-
-private command _SetHkeyPageItemDictionary @curlyData
-   curly_SetItemIDArray curlyData, "refArray", "4ecda1442570d900"
-   curly_SetItemIDArray curlyData, "someHandler", "39e7dd9a1560241a"
-   curly_SetItemIDArray curlyData, "handlerSyntax", "54f306e694aa494b"
-   curly_SetItemIDArray curlyData, "handlerMetadata", "da8cf69872f38050"
-   curly_SetItemIDArray curlyData, "callList", "0c0d997d16532d79"
-   curly_SetItemIDArray curlyData, "handlerTags", "26d290f03f2aa26e"
-   curly_SetItemIDArray curlyData, "dotText", "b6853287820608f3"
-   curly_SetItemIDArray curlyData, "paramList", "0a99c44502e29156"
-   curly_SetItemIDArray curlyData, "githubPara", "8869c0772777be8e"
-end _SetHkeyPageItemDictionary

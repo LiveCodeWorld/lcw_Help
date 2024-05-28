@@ -80,13 +80,6 @@ private function _ObjectStoryArray sObject
    return storyArray
 end _ObjectStoryArray
 
--- private function _MenuStoryArray mController
-put the menu_PermalinkMarkdown of mController into sMarkdown
-get storyArray_ConstructItem (sMarkdown, "markdown")
-put it into storyArray[1]
-return storyArray
-end _MenuStoryArray
-
 
 --> Help | Update
 -
@@ -94,7 +87,7 @@ command help_TidyHandler @someHandler, pIndentNum
    -- was "help_IndentHandler"
    if pIndentNum is not a number then put 4 into pIndentNum
    --
-   put word 1 to -1 of someHandler
+   put word 1 to -1 of someHandler into someHandler
    repeat with lineNum = 1 to the number of lines of someHandler
       put line lineNum of someHandler into someLine
       get word 1 to -1 of someLine

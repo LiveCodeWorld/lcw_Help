@@ -95,7 +95,7 @@ private command _RecreateHelp hKey
    --
    lcw_Answer "Are you sure you wish to create the wiki help page for handler '[[hName]]'? This will overwrite any existing page.", editorStack, hName
    --
-   ask_PushGithub hObject
+   -- ask_PushGithub hObject
    --
    help_CreateFromHkey hKey
    put the result into pageArray
