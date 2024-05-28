@@ -135,6 +135,9 @@ function help_FetchNewPageArray pageTitle, scriptType, curlyData, pScriptHelp
       case "transport"
       default
          curly_MergePageArray pageArray, curlyData
+         dispay_Data curlyData, "Hanlder", "curlyData"
+         exit to top
+         
          put curly_GetData (curlyData, "callList") into callList
          if word 1 of callList is not "-" then
             -- not a list
