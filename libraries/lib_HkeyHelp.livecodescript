@@ -39,7 +39,6 @@ end script_MarkdownHandlerindex
 -
 command help_CreateFromHkey hKey, pScriptHelp
    put hkey_IsMenuHandler (hKey) into isMenuHandler
-   breakpoint
    switch
       case isMenuHandler is true
          help_CreateMenuItem hKey, pScriptHelp
