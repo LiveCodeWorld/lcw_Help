@@ -15,6 +15,16 @@ As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 
 --> Working on
 -
+function help_FetchTemplateArray scriptType, pStripJournal
+   -- see also "federation_FetchTemplatePageArray"
+   put help_FetchTemplateJson (scriptType) into templateJSON
+   put json_ToArray (templateJSON) into templateArray
+   if pStripJournal is true then
+      pageArray_StripJournal templateArray
+   end if
+   return templateArray
+end help_FetchTemplateArray
+
 function help_FetchTemplateJson scriptType
    put help_ConstructDomain (scriptType) into fedwikiDomain
    _FixScriptType scriptType
@@ -126,16 +136,6 @@ end help_GetTags
 
 --> Help | Template | Model
 -
-function help_FetchTemplateArray scriptType, pStripJournal
-   -- see also "federation_FetchTemplatePageArray"
-   put help_FetchTemplateJson (scriptType) into templateJSON
-   put json_ToArray (templateJSON) into templateArray
-   if pStripJournal is true then
-      pageArray_StripJournal templateArray
-   end if
-   return templateArray
-end help_FetchTemplateArray
-
 function help_ConstructDomain scriptType
    _FixScriptType scriptType
    put scriptType & ".livecode.world" into wikiDomain

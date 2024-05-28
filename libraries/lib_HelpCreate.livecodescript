@@ -64,6 +64,7 @@ end help_PageArray
 --> Help | Create
 -
 command help_CreateFromObject sObject
+   breakpoint
    put the script_Type of sObject into scriptType
    switch scriptType
       case "controller"
