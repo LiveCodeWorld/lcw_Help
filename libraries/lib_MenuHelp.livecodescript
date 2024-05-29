@@ -289,24 +289,6 @@ command launch_MenuHelp gMenuTitle
    end if
 end launch_MenuHelp
 
-command launch_ObjectHelp tObject, pDisplayObject
-   put the help_Url [true] of tObject into helpURL
-   if helpURL is empty then
-      put the name of tObject into oName
-      if exists (pDisplayObject) is false then
-         put rev_ScriptEditorStack () into pDisplayObject
-      end if
-      lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", pDisplayObject, oName
-      
-      ask_PushGithub tObject
-      help_CreateFromObject tObject
-      put the help_Url [true] of tObject into helpURL
-   end if
-   --
-   launch url helpURL
-   return helpURL
-end launch_ObjectHelp
-
 command launch_OrCreateProject projectName
    launch_ProjectHelp projectName
    --

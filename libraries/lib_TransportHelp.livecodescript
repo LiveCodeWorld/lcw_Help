@@ -38,7 +38,8 @@ command help_CreateTransportPage tObject, pageTitle, pScriptHelp
    put fedwiki_MarkdownIndex (dProjectNames) into curlyData ["all"]["Project Deps"]
    put "https://rest.livecode.world/" & tName into curlyData ["all"]["restURL"]
    
-   put help_FetchNewPageArray (pageTitle, scriptType, curlyData, pScriptHelp) into pageArray
+   put pageTitle into curlyData ["title"]
+   put wikiPage_Help ("Transport", curlyData, pScriptHelp) into pageArray
    
    # Check
    if pageArray_Check (pageArray) is false then
@@ -55,7 +56,7 @@ command help_CreateTransportPage tObject, pageTitle, pScriptHelp
    pageArray_ReplaceSectionBody pageArray, "Routes", storyArray
    
    # Store 
-   help_CreatePageArray pageArray, scriptType
+   help_StorePageArray pageArray, scriptType
    return the result
 end help_CreateTransportPage
 

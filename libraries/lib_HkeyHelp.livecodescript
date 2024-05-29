@@ -12,6 +12,14 @@ version: 0.1
 
 --> Working on
 -
+function markdown_TagItems someTags, pNotThese
+   repeat for each line someTag in someTags
+      if someTag is among the items of pNotThese then next repeat
+      put "[[" & someTag & "]], " after handlerTagList
+   end repeat
+   delete char -2 to -1 of handlerTagList
+   return handlerTagList
+end markdown_TagItems
 
 
 --> Help
@@ -47,14 +55,20 @@ command help_CreateFromHkey hKey, pScriptHelp
          transport_CreateHkeyHelp hKey, pScriptHelp
          break
       default
-         put help_ConstructHandlerTitle (hKey) into pageTitle
-         put help_HkeyCurlyData (hKey, false) into curlyData
-         --
-         help_Create pageTitle, "handler", curlyData, pScriptHelp
+         put help_FromHkey (hKey, pScriptHelp) into pageArray
+         breakpoint
+         help_StoreHkeyPageArray hKey, pageArray
    end switch
-   put the result into shellResult -- error, fetching ip address for droplet AtopiaDropletName
-   return shellResult
 end help_CreateFromHkey
+
+function help_FromHkey hKey, pScriptHelp
+   put help_ConstructHandlerTitle (hKey) into pageTitle
+   put help_HkeyCurlyData (hKey, false) into curlyData
+   put pageTitle into curlyData ["title"]
+   --
+   put wikiPage_Help ("handler", curlyData, pScriptHelp) into pageArray
+   return pageArray
+end help_FromHkey
 
 function help_GetHkeyTags hKey
    put help_FetchHkeyPageArray (hKey) into pageData
@@ -81,27 +95,19 @@ function help_ConstructHandlerTitle hKey
 end help_ConstructHandlerTitle
 
 function help_HkeyCurlyData hKey, pUpdate
-   -- also used by handlers in "lib_Transport"
    local curlyData
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    --
+   curly_SetAll curlyData, "object", the name of hObject
    curly_SetAll curlyData, "stackName", the stack_Name of hObject
-   curly_SetAll curlyData, "projectName", the project_Name of hObject
-   --  
-   curly_SetAll curlyData, "githubHandlerURL", the github_HandlerURL [hKey] of hObject
-   curly_SetAll curlyData, "githubPermalink", the github_Permalink [hKey] of hObject
-   curly_SetAll curlyData, "githubObjectURL", github_GetUrl (stackName)
    curly_SetAll curlyData, "handlerType", hkey_GetType (hKey)
    --   
-   put hkey_FetchHandler (hKey) into someHandler
+   put handler_Get (hKey, true) into someHandler
    help_TidyHandler someHandler
    curly_SetAll curlyData, "someHandler", someHandler
    --
    put hkey_GetDotText (hKey) into dotText
    if dotText is not empty then curly_SetAll curlyData, "dotText", dotText
-   --
-   put _ConstructHandlerMetadata (hKey, projectName) into handlerMetadata
-   curly_SetAll curlyData, "handlerMetadata", handlerMetadata
    --
    put _ConstructHandlerSyntax (someHandler, hKey) into handlerSyntax
    curly_SetAll curlyData, "handlerSyntax", handlerSyntax
@@ -114,6 +120,15 @@ function help_HkeyCurlyData hKey, pUpdate
    --
    put _ConstructHandlerTags (hKey, pUpdate) into handlerTags -- also look inside handler
    curly_SetAll curlyData, "handlerTags", handlerTags
+   --
+   put the project_Name of hObject into projectName
+   put _ConstructHandlerMetadata (hKey, projectName) into handlerMetadata
+   curly_SetAll curlyData, "projectName", projectName
+   curly_SetAll curlyData, "handlerMetadata", handlerMetadata
+   --
+   curly_SetAll curlyData, "githubHandlerURL", the github_HandlerURL [hKey] of hObject
+   curly_SetAll curlyData, "githubPermalink", the github_Permalink [hKey] of hObject
+   -- curly_SetAll curlyData, "githubObjectURL", github_GetUrl (stackName) -- seems slow
    --
    return curlyData
 end help_HkeyCurlyData
@@ -163,24 +178,26 @@ private function _ConstructHandlerTags hKey, pUpdate
       delete char -1 of handlerTags
    end if
    --
-   put _GetMarkdownTagItems (someTags, "from,to") into handlerTagList
+   put markdown_TagItems (handlerTags, "from,to") into handlerTagList
    --
    return handlerTagList
 end _ConstructHandlerTags
 
-private function _GetMarkdownTagItems someTags, pNotThese
-   repeat for each line someTag in someTags
-      if someTag is among the items of pNotThese then next repeat
-      put "[[" & someTag & "]], " after handlerTagList
-   end repeat
-   delete char -2 to -1 of handlerTagList
-   return handlerTagList
-end _GetMarkdownTagItems
+private function _GitPath hObject
+   -- put the github_RelativePath of hObject into relPath
+   put the stack_Folder of stack "LCW" into gitFolder
+   put the filename of hObject into sFile
+   --
+   set the itemdelimiter to slash
+   put the number of items of gitFolder + 1 into sNum
+   put item sNum to -1 of sFile into relPath
+   return relPath
+end _GitPath
 
 private function _ConstructHandlerMetadata hKey, projectName
    put hkey_GetType (hKey) into handlerType
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put the github_RelativePath of hObject into relPath
+   put _GitPath (hObject) into relPath
    
    put "Type:" && handlerType & CR after handlerMetaData
    put "Project:" && projectName & CR after handlerMetaData

@@ -121,7 +121,9 @@ command help_CreateMenuItem hKey, pScriptHelp
    
    -- fetch a handler template    
    put help_HkeyCurlyData (hKey, false) into hkeyCurlyData
-   put help_FetchNewPageArray (hkeyPageTitle, "handler", hkeyCurlyData, pScriptHelp) into hkeyPageArray
+   put hkeyPageTitle into hkeyCurlyData ["title"]
+   --
+   put wikiPage_Help ("handler", hkeyCurlyData, pScriptHelp) into hkeyPageArray
    --
    pageArray_Set menuSubDomain, hkeySlug, hkeyPageArray
    return the result

@@ -15,7 +15,14 @@ As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 
 --> Working on
 -
-function help_FetchTemplateArray scriptType, pStripJournal
+function wikiTemplate_GetHelp subDomain
+   put subDomain & ".livecode.world" into wikiDomain
+   put subDomain & "-" & "template" into pageSlug
+   put pageArray_Get (wikiDomain, pageSlug) into pageArray
+   return pageArray
+end wikiTemplate_GetHelp
+
+function help_FetchTemplateArray scriptType, pStripJournal -- old us "wikiTemplate_GetHelp"
    -- see also "federation_FetchTemplatePageArray"
    put help_FetchTemplateJson (scriptType) into templateJSON
    put json_ToArray (templateJSON) into templateArray
@@ -25,9 +32,9 @@ function help_FetchTemplateArray scriptType, pStripJournal
    return templateArray
 end help_FetchTemplateArray
 
-function help_FetchTemplateJson scriptType
+function help_FetchTemplateJson scriptType -- old us "wikiTemplate_GetHelp
    put help_ConstructDomain (scriptType) into fedwikiDomain
-   _FixScriptType scriptType
+   script_FixType scriptType
    put scriptType & "-" & "template" into pageSlug
    put pageJson_Fetch (fedwikiDomain, pageSlug) into pageJSON
    return pageJSON
@@ -49,46 +56,6 @@ function help_RelatedStacks stackName
    filter modelsAndLibs with sFilter
    return modelsAndLibs
 end help_RelatedStacks
-
-function help_ObjectCurlyData sObject, scriptType
-   local curlyData
-   
-   # YAML
-   put the object_Yaml of sObject into curlyData ["all"]["objectYaml"]
-   
-   # Keywords
-   put the script_HandlerNames [true] of sObject into handlerNames
-   put help_GetTagItems (handlerNames) into curlyData ["all"]["keywordList"]
-   
-   # Related libraries and models
-   put the stack_Name of sObject into stackName
-   put help_RelatedStacks (stackName) into stackIndex
-   put markdown_LinkedBullets (stackIndex) into curlyData ["all"]["relatedBullets"]
-   
-   # Handlers and Calls
-   put the script_ExternalCalls of sObject into externalCalls
-   put fedwiki_MarkdownIndex (handlerNames) into curlyData ["all"]["handlerBullets"]
-   put fedwiki_HkeyMarkdownIndex (externalCalls) into curlyData ["all"]["externalCalls"]
-   
-   # Github
-   _AddGithubObjectCurlyData curlyData, sObject
-   
-   # Object
-   _AddObjectCurlyData curlyData, scriptType, sObject
-   
-    return curlyData
-end help_ObjectCurlyData
-
-private command _AddGitHubObjectCurlyData @curlyData, sObject
-   put the github_LaunchURL of sObject into objectLink
-   put objectLink into curlyData ["all"]["github_LaunchURL"]
-   put the github_ProjectURL of sObject into curlyData ["all"]["github_ProjectURL"]
-   --
-   put githubURL && "github" into githubLink
-   put the name of sObject into oName
-   put "View source code over at [" & objectLink && "github" & "]" into githubPara
-   put merge (githubPara) into curlyData ["all"]["githubPara"]
-end _AddGitHubObjectCurlyData
 
 
 --> Props
@@ -137,7 +104,7 @@ end help_GetTags
 --> Help | Template | Model
 -
 function help_ConstructDomain scriptType
-   _FixScriptType scriptType
+   script_FixType scriptType
    put scriptType & ".livecode.world" into wikiDomain
    return wikiDomain
 end help_ConstructDomain
@@ -197,70 +164,7 @@ function help_ConstructURL stackName, scriptType, pCheckURL
    return someURL
 end help_ConstructURL
 
-
---> Private
--
-private command _AddObjectCurlyData @curlyData, scriptType, sObject
-   put the stack_Name of sObject into stackName
-   put the project_Name of sObject into projectName 
-   put scriptType into curlyData ["scriptType"]
-   put projectName into curlyData ["projectName"]
-   --
-   switch scriptType
-      case "menu"
-      case "controller"
-         -- put the script_Metadata ["name"] of sObject into stackName
-         put stackName into menuTitle
-         put the menu_Handlers [menuTitle] of sObject into mHandlers
-         put mHandlers into curlyData ["all"]["Menu Handler Index"]
-         -- put fedwiki_MarkdownIndex (mHandlers) into curlyData ["id"]["abb62f579a1d7288"]
-         --
-         put help_ConstructMenuPageTitle (stackName) into pageTitle
-         put pageTitle into curlyData ["title"]
-         --
-         return pageTitle
-      case "ide"         
-         put the script_MarkdownHandlerindex of sObject into curlyData ["all"]["Handler List"]
-         put relFolder into curlyData ["all"]["rel folder"]
-         put shortFile into curlyData ["all"]["short file"]
-         put stackName into curlyData ["title"]
-         break
-      case "home"
-      case "project"
-         put the project_Deps of sObject into projectDeps
-         put fedwiki_MarkdownIndex (projectDeps) into markdownIndex
-         put markdownIndex into curlyData ["all"]["Project Dep List"]
-         --
-         put project_GetStackNameArray (projectName) into stackNameArray
-         repeat for each item shortFolder in "Libraries,Models,Controllers,Modules,Views"
-            put stackNameArray [shortFolder] into sArray
-            put the keys of sArray into someIndex
-            if someIndex is empty then next repeat
-            
-            put "#" && shortFolder & CR&CR after pMarkdown
-            sort someIndex
-            put fedwiki_MarkdownIndex (someIndex) & CR&CR after pMarkdown
-         end repeat
-         delete char -1 of pMarkdown
-         put pMarkdown into curlyData ["all"]["Project Components"]
-         put stackName into curlyData ["title"]
-         break
-      case "transport"
-      case "library"
-      default
-         -- put "8869c0772777be8e" into githubLinkID
-         --put the script_MarkdownHandlerindex of tObject into curlyData ["all"]["Handler List"]
-         -- put the script_Deps of tObject into curlyData ["all"]["Stack Deps"]
-         
-         put help_ConstructDomain (scriptType) into wikiDomain
-         put help_ConstructTitle (stackName, scriptType) into pageTitle 
-         put pageTitle into curlyData ["title"]
-   end switch
-   
-   return stackName
-end _AddObjectCurlyData
-
-private command _FixScriptType @scriptType
+command script_FixType @scriptType
    switch scriptType
       case "home"
          put "project" into scriptType
@@ -269,4 +173,4 @@ private command _FixScriptType @scriptType
          put "menu" into scriptType
          break
    end switch
-end _FixScriptType
+end script_FixType

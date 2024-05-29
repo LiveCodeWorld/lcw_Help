@@ -116,7 +116,13 @@ on menu_HandlerHelp hKey
    end if
 end menu_HandlerHelp
 
-on _
+on menu_DraftHandlerHelp hKey
+   put help_FromHkey (hKey) into pageArray
+   --
+   display_WikiGhost "handler.livecode.world", pageArray
+end menu_DraftHandlerHelp
+
+private on _
 end _
 
 on menu_LaunchGithubUrl hKey
@@ -166,25 +172,6 @@ on menu_UpdateHandler hKey
    end if
 end menu_UpdateHandler
 
-on _UpdateHandlerCode hKey
-   help_UpdateHandlerCode hKey
-   put the result into foundHandler
-   --
-   if foundHandler is empty then
-      put LocalArray ["tObject"] into tObject
-      lcw_AnswerWarning "Could not locate 'code' section of handler page '[[hKey]]'!", tObject, hKey
-   else
-      launch_HkeyHelp hKey
-   end if
-end _UpdateHandlerCode
-
-on _UpdateCalls hKey
-   help_UpdateHandlerCalls hKey
-   put the result into mdCalls
-   --
-   launch_HkeyHelp hKey
-end _UpdateCalls
-
 on menu_UpdateMetadata hKey
    switch
       case hkey_IsMenuHandler (hKey)
@@ -202,8 +189,8 @@ on menu_UpdateMetadata hKey
    end switch
 end menu_UpdateMetadata
 
-on _
-end _
+private on __
+end __
 
 on menu_MenuHandlerHelp hKey
    launch_MenuItemHelp hKey
@@ -214,6 +201,22 @@ on menu_MenuHandlerHelp hKey
       launch_MenuItemHelp hKey
    end if
 end menu_MenuHandlerHelp
+
+on menu_GetDot hkey
+   put hkey_GetDotText (hKey) into dotText
+   put dotText
+end menu_GetDot
+
+on menu_FetchGraphJson hkey
+   put dot_GetArray (hkey) into dotArray
+   display_Data dotArray, hkey
+   
+   -- put help_FetchHkeyPageArray (hKey) into pageArray
+   -- put pageArray_GetGraph (pageArray) into dotText
+   -- put dot_Convert (dotText) into dotJSON
+   --
+   --  display_JSON dotJSON, "dotJSON"
+end menu_FetchGraphJson
 
 on submenu_Dev
    return menu_DevTitle ("Global | Hkey | Help | Menu")
