@@ -17,25 +17,22 @@ command help_CreateTransportPage tObject, pageTitle, pScriptHelp
    --
    put the dep_StackNames of tObject into dProjectNames
    replace comma with CR in dProjectNames
+   -- comment 
+   put the curly_Data of tObject into curlyData
    --
-   put the stack_Name of tObject into stackName
+   put curlyData ["title"] into pageTitle
+   put curlyData ["scriptType"] into scriptType
+   put curlyData ["stackName"] into stackName
+   --
    put stackName into tName
    replace ".lc" with empty in tName
    put help_ConstructTitle (stackName, scriptType) into pageTitle
-   
-   put help_ObjectCurlyData (tObject, scriptType) into curlyData
-   /*
-   put the transport_DepHkeyArray of tObject into hKeyArray
-   put hkeyArray_GetProjectDepArray (hkeyArray) into dArray
-   put the keys of dArray into dProjectNames
-   --  put hkeyArray_GetStackDepArray (hkeyArray) into objectDepArray
-   */
    
    put pageTitle into curlyData ["all"]["transport name"]
    put tName into curlyData ["all"]["transport route"]
    put the rig_RouteNames of tObject into routeNames
    put help_GetTagItems (routeNames) into curlyData ["all"]["tagNames"]
-   put fedwiki_MarkdownIndex (dProjectNames) into curlyData ["all"]["Project Deps"]
+   put markdown_LinkedBullets (dProjectNames) into curlyData ["all"]["Project Deps"]
    put "https://rest.livecode.world/" & tName into curlyData ["all"]["restURL"]
    
    put pageTitle into curlyData ["title"]
@@ -227,7 +224,7 @@ private command _SetCurlyTransportRoutes @curlyData, sObject
    replace comma with CR in handlerNames
    line_Delete "index", handlerNames
    if handlerNames is not empty then
-      put fedwiki_MarkdownIndex (handlerNames) into curlyData ["id"]["642e249b4a7faa02"]
+      put markdown_LinkedBullets (handlerNames) into curlyData ["id"]["642e249b4a7faa02"]
    end if
 end _SetCurlyTransportRoutes
 

@@ -121,7 +121,8 @@ end help_UpdateFromHkey
 command help_UpdateFromObject sObject
    -- does not use script_Help to update first paragraph
    put help_FetchObjectPageArray (sObject) into pageArray
-   put help_ObjectCurlyData (sObject) into curlyData
+   --
+   put the curly_Data of sObject into curlyData
    curly_MergePageArray pageArray, curlyData
    help_StoreObjectPageArray sObject, pageArray
 end help_UpdateFromObject

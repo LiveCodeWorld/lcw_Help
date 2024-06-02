@@ -44,7 +44,7 @@ end help_CreateMenuPageArray
 
 private command help_MenuMergeAndStore pageArray, mController
    # Curly merge
-   put help_ObjectCurlyData (mController, "menu") into curlyData
+   put the curly_Data of mController into curlyData
    curly_MergePageArray pageArray, curlyData
    
    # Store
