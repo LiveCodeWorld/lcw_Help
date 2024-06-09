@@ -49,15 +49,17 @@ command help_CreateFromHkey hKey, pScriptHelp
    put hkey_IsMenuHandler (hKey) into isMenuHandler
    switch
       case isMenuHandler is true
+         breakpoint
          help_CreateMenuItem hKey, pScriptHelp
          break
       case hkey_IsTransportHandler (hKey)
+         breakpoint
          transport_CreateHkeyHelp hKey, pScriptHelp
          break
       default
          put help_FromHkey (hKey, pScriptHelp) into pageArray
-         breakpoint
          help_StoreHkeyPageArray hKey, pageArray
+         return pageArray
    end switch
 end help_CreateFromHkey
 

@@ -109,18 +109,19 @@ end _RecreateHelp
 
 --> Global | Hkey | Help | Menu
 -
-on menu_HandlerHelp hKey
-   launch_HkeyHelp hKey
-   if the result is empty then
-      _RecreateHelp hKey
-   end if
-end menu_HandlerHelp
-
 on menu_DraftHandlerHelp hKey
    put help_FromHkey (hKey) into pageArray
    --
    display_WikiGhost "handler.livecode.world", pageArray
 end menu_DraftHandlerHelp
+
+on menu_HandlerHelp hKey
+   launch_HkeyHelp hKey
+   if the result is empty then
+      breakpoint
+      _RecreateHelp hKey
+   end if
+end menu_HandlerHelp
 
 private on _
 end _
