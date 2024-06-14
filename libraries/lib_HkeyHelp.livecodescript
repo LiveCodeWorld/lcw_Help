@@ -5,24 +5,12 @@ copyright: David Bovill
 license: GPLv3
 name: lib_HkeyHelp
 type: library
-version: 0.1
+version: 0.2
 
 /*Some help*/
 
 
---> Working on
--
-function markdown_TagItems someTags, pNotThese
-   repeat for each line someTag in someTags
-      if someTag is among the items of pNotThese then next repeat
-      put "[[" & someTag & "]], " after handlerTagList
-   end repeat
-   delete char -2 to -1 of handlerTagList
-   return handlerTagList
-end markdown_TagItems
-
-
---> Help
+--> Props
 -
 getprop script_MarkdownHandlerIndex
    put the long id of the target into hObject
@@ -35,12 +23,177 @@ getprop script_MarkdownHandlerIndex
       put word 3 of hTableLine + 1 into sLineNum
       put word 4 of hTableLine + 1 into eLineNum
       
-      put github_handlerURL (hObject, sLineNum, eLineNum) into githubURL 
+      put github_GetHandlerURL (hObject, sLineNum, eLineNum) into githubURL 
       put "- [" & hName & "](" & githubURL & ")" & CR after markdownIndex
    end repeat
    delete char -1 of markdownIndex
    return markdownIndex
 end script_MarkdownHandlerindex
+
+
+--> Working on
+-
+function script_SingularType pluralType
+   switch pluralType
+      case "libraries"
+         return "library"
+      default 
+         if char -1 of pluralType = "s" then delete char -1 of pluralType
+         return tolower (pluralType)
+   end switch
+end script_SingularType
+
+function handler_WhereData hKey
+   local handlerMetaData
+   --
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the result into shortHkey
+   if exists (hObject) is false then return "Error, object does not exist:" && hObject
+   
+   put the project_Name of hObject into projectName
+   put the module_Name of hObject into moduleName
+   --
+   put _GitPath (hObject) into relPath
+   put _ShortFolder (relPath) into libType
+   put _ShortFile (relPath) into shortFile
+   
+   put word 1 to 2 of shortHkey into hMetaData ["Hkey"]
+   put the name of hObject into hMetaData ["Script"]
+   put projectName into hMetaData ["Project"]
+   if moduleName is not empty then
+      put moduleName into hMetaData ["Module"]
+   end if
+   put libType into hMetaData ["Kind"]
+   put shortFile into hMetaData ["File"]
+   put relPath into hMetaData ["Path"]
+   --
+   return hMetaData
+end handler_WhereData
+
+function handler_MetaData hKey
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   --
+   put hkey_GetType (hKey) into hMetaData ["Type"]
+   put "all" into hMetaData ["OS"]
+   put "all" into hMetaData ["Platforms"]
+   --
+   put handler_Get (hKey, true) into sHandler
+   help_TidyHandler sHandler
+   put sHandler into hMetaData ["script"]
+   --
+   put handler_ConstructLine (sHandler, hType) into hLine
+   put hLine into hMetaData ["Handler"]
+   --
+   return hMetaData
+end handler_MetaData
+
+function handler_ConstructLine sHandler, hType
+   put line 1 of sHandler into hLine
+   --
+   if char 1 of hType = "p" then
+      delete word 1 to 2 of hLine
+   else
+      delete word 1 of hLine
+   end if
+   
+   switch
+      case hType contains "f"
+         put "(" before word 2 of hLine
+         put ")" after hLine
+         break
+      case hType contains "g"
+      case hType contains "s"
+         put "[" before word 2 of hLine
+         put "]" after hLine
+         break
+   end switch
+   --
+   return hLine 
+end handler_ConstructLine
+
+
+--> Help | Hkey | CurlyData
+-
+function help_HkeyCurlyData hKey
+   local curlyData
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the result into shortHkey
+   if exists (hObject) is false then return "Error, object doeas not exist for hKey:" && hKey
+   
+   # Stack and Object
+   put the stack_Name of hObject into stackName
+   curly_SetAll curlyData, "stackName", stackName
+   curly_SetAll curlyData, "object", the name of hObject
+   
+   # Hkey
+   put "[[" & hType && hName & "]] of stack [[" & stackName & "]]" into hkeyLink
+   put hkey_GetType (hKey) into hTypeWord
+   --
+   curly_SetAll curlyData, "hKey", hKey
+   curly_SetAll curlyData, "shortHkey", shortHkey
+   curly_SetAll curlyData, "hkeyLink", hkeyLink
+   curly_SetAll curlyData, "hTypeWord", hTypeWord
+   
+   put the project_Name of hObject into projectName
+   curly_SetAll curlyData, "projectName", projectName
+   
+   # Project and Module
+   put the module_Name of hObject into moduleName
+   if moduleName is not empty then
+      curly_SetAll curlyData, "moduleName", moduleName
+   end if
+   
+   # Handler and Syntax
+   put handler_MetaData (hKey) into hMetaData
+   put hMetaData ["script"] into sHandler
+   curly_SetAll curlyData, "someHandler", sHandler
+   --
+   put _ConstructHandlerSyntax (sHandler, hKey) into handlerSyntax
+   curly_SetAll curlyData, "handlerSyntax", handlerSyntax
+   
+   # Metadata and Where Yaml
+   put handler_WhereData (hKey) into whereData
+   put _WhereYaml (whereData) into whereYaml
+   put _HandlerYaml (hMetaData) into handlerYaml
+   -- 
+   curly_SetAll curlyData, "handlerYaml", handlerYaml
+   curly_SetAll curlyData, "whereYaml", whereYaml
+   
+   # Kind and handler line
+   put whereData ["Kind"] into pluralType
+   put script_SingularType (pluralType) into libType
+   curly_SetAll curlyData, "libType", libType
+   curly_SetAll curlyData, "hLine", hLine
+   
+   # Dot
+   put hkey_GetDotText (hKey) into dotText
+   if dotText is empty then
+      put _DefaultDotText (hKey) into dotText
+   end if
+   if dotText is not empty then curly_SetAll curlyData, "dotText", dotText
+   
+   # Calls
+   put _ConstructCallList (sHandler) into callList
+   curly_SetAll curlyData, "callList", callList
+   
+   # Params
+   put _ConstructParamList (sHandler) into paramList
+   curly_SetAll curlyData, "paramList", paramList
+   
+   # Tags
+   put _ConstructHandlerTags (hKey, pUpdate) into handlerTags -- also look inside handler
+   curly_SetAll curlyData, "handlerTags", handlerTags
+   
+   # Github
+   curly_SetAll curlyData, "githubHandlerURL", the github_HandlerURL [hKey] of hObject
+   curly_SetAll curlyData, "githubPermalink", the github_Permalink [hKey] of hObject
+   -- curly_SetAll curlyData, "githubObjectURL", github_GetUrl (stackName) -- seems slow
+   
+   # Deps
+   curly_SetAll curlyData, "handlerDeps", _StackLinkList (hkey, hObject)
+   
+   return curlyData
+end help_HkeyCurlyData
 
 
 --> Hkey | Help
@@ -65,16 +218,16 @@ end help_CreateFromHkey
 
 function help_FromHkey hKey, pScriptHelp
    put help_ConstructHandlerTitle (hKey) into pageTitle
-   put help_HkeyCurlyData (hKey, false) into curlyData
+   put help_HkeyCurlyData (hKey) into curlyData
    put pageTitle into curlyData ["title"]
    --
-   put wikiPage_Help ("handler", curlyData, pScriptHelp) into pageArray
+   put help_ForkDomains () into forkDomains
+   put wikiPage_Help ("handler", curlyData, pScriptHelp, forkDomains) into pageArray
    return pageArray
 end help_FromHkey
 
 function help_GetHkeyTags hKey
    put help_FetchHkeyPageArray (hKey) into pageData
-   _SetHkeyPageItemDictionary pageData
    --
    put pageData_GetText (pageData, "handlerTags") into handlerTags
    replace "[[" with empty in handlerTags
@@ -96,45 +249,6 @@ function help_ConstructHandlerTitle hKey
    return hName
 end help_ConstructHandlerTitle
 
-function help_HkeyCurlyData hKey, pUpdate
-   local curlyData
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   --
-   curly_SetAll curlyData, "object", the name of hObject
-   curly_SetAll curlyData, "stackName", the stack_Name of hObject
-   curly_SetAll curlyData, "handlerType", hkey_GetType (hKey)
-   --   
-   put handler_Get (hKey, true) into someHandler
-   help_TidyHandler someHandler
-   curly_SetAll curlyData, "someHandler", someHandler
-   --
-   put hkey_GetDotText (hKey) into dotText
-   if dotText is not empty then curly_SetAll curlyData, "dotText", dotText
-   --
-   put _ConstructHandlerSyntax (someHandler, hKey) into handlerSyntax
-   curly_SetAll curlyData, "handlerSyntax", handlerSyntax
-   --
-   put _ConstructCallList (someHandler) into callList
-   curly_SetAll curlyData, "callList", callList
-   --
-   put _ConstructParamList (someHandler) into paramList
-   curly_SetAll curlyData, "paramList", paramList
-   --
-   put _ConstructHandlerTags (hKey, pUpdate) into handlerTags -- also look inside handler
-   curly_SetAll curlyData, "handlerTags", handlerTags
-   --
-   put the project_Name of hObject into projectName
-   put _ConstructHandlerMetadata (hKey, projectName) into handlerMetadata
-   curly_SetAll curlyData, "projectName", projectName
-   curly_SetAll curlyData, "handlerMetadata", handlerMetadata
-   --
-   curly_SetAll curlyData, "githubHandlerURL", the github_HandlerURL [hKey] of hObject
-   curly_SetAll curlyData, "githubPermalink", the github_Permalink [hKey] of hObject
-   -- curly_SetAll curlyData, "githubObjectURL", github_GetUrl (stackName) -- seems slow
-   --
-   return curlyData
-end help_HkeyCurlyData
-
 
 --> Help | pageArray | Set
 -
@@ -155,17 +269,16 @@ command help_SetPageArrayHandler @pageArray, hKey
    put pageArray_FindFirstSectionItem ("Handler", "code", pageArray) into itemNum
    if itemNum = 0 then return empty
    
-   put hkey_FetchHandler (hKey) into someHandler
-   help_TidyHandler someHandler
-   pageArray_EditItem pageArray, someHandler, itemNum
-   return someHandler
+   put hkey_FetchHandler (hKey) into sHandler
+   help_TidyHandler sHandler
+   pageArray_EditItem pageArray, sHandler, itemNum
+   return sHandler
 end help_SetPageArrayHandler
 
 
 --> Private
 -
-private function _ConstructHandlerTags hKey, pUpdate
-   -- used by "help_HkeyCurlyData()"
+private function _ConstructHandlerTags hKey
    local handlerTagList
    
    put hkey_ConstructKeywords (hKey) into handlerTags
@@ -185,36 +298,34 @@ private function _ConstructHandlerTags hKey, pUpdate
    return handlerTagList
 end _ConstructHandlerTags
 
-private function _GitPath hObject
-   -- put the github_RelativePath of hObject into relPath
-   put the stack_Folder of stack "LCW" into gitFolder
-   put the filename of hObject into sFile
-   --
-   set the itemdelimiter to slash
-   put the number of items of gitFolder + 1 into sNum
-   put item sNum to -1 of sFile into relPath
-   return relPath
-end _GitPath
-
-private function _ConstructHandlerMetadata hKey, projectName
-   put hkey_GetType (hKey) into handlerType
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put _GitPath (hObject) into relPath
+private function _ConstructCallList sHandler, pIncludePrivate
+   # Extract calls from handler
+   put handler_ExtractCalls (sHandler) into shortCalls
    
-   put "Type:" && handlerType & CR after handlerMetaData
-   put "Project:" && projectName & CR after handlerMetaData
-   put "Github:" && relPath & CR after handlerMetaData
-   put "OS: all" & CR after handlerMetaData
-   put "Platforms: all" & CR after handlerMetaData
-   -- put "Checked: false" & CR after handlerMetaData
-   --
-   delete char -1 of handlerMetaData
-   return handlerMetadata
-end _ConstructHandlerMetadata
+   # Default text if empty
+   if shortCalls is empty then
+      return "There are no calls for this handler."
+   end if
+   
+   # Construct list
+   repeat for each line shortCall in shortCalls
+      put word 2 of shortCall into hName
+      
+      if char 1 of hName = "_" then
+         if pIncludePrivate is true then
+            put "- [[" & hName & "]]" & CR after markdownList
+         end if
+      else
+         put "- [[" & hName & "]]" & CR after markdownList
+      end if
+   end repeat
+   delete char -1 of markdownList
+   return markdownList
+end _ConstructCallList
 
-private function _ConstructHandlerSyntax someHandler, hKey
+private function _ConstructHandlerSyntax sHandler, hKey
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   put line 1 of someHandler into handlerLine
+   put line 1 of sHandler into handlerLine
    replace "@" with empty in handlerLine
    switch
       case hType contains "f"
@@ -230,28 +341,29 @@ private function _ConstructHandlerSyntax someHandler, hKey
    return handlerSyntax
 end _ConstructHandlerSyntax
 
-private function _ConstructCallList someHandler
-   # Extract calls from handler
-   put handler_ExtractCalls (someHandler) into shortCalls
-   -- hkey_StoreCalls hKey, shortCalls
-   -- put the handler_PublicCalls [hKey] of hObject into shortCalls
-   
-   # Default text if empty
-   if shortCalls is empty then
-      return "There are no calls for this handler."
-   end if
-   
-   # Construct list
-   repeat for each line shortCall in shortCalls
-      put word 2 of shortCall into hName
-      put "- [[" & hName & "]]" & CR after markdownList
-   end repeat
-   delete char -1 of markdownList
-   return markdownList
-end _ConstructCallList
+private function _ShortFile relPath
+   set the itemdelimiter to slash
+   return item -1 of relPath
+end _ShortFile
 
-private function _ConstructParamList someHandler
-   put word 1 to -1 of line 1 of someHandler into hLine
+private function _ShortFolder relPath
+   set the itemdelimiter to slash
+   return item -2 of relPath
+end _ShortFolder
+
+private function _GitPath hObject
+   -- put the github_RelativePath of hObject into relPath
+   put the stack_Folder of stack "LCW" into gitFolder
+   put the filename of hObject into sFile
+   --
+   set the itemdelimiter to slash
+   put the number of items of gitFolder + 1 into sNum
+   put item sNum to -1 of sFile into relPath
+   return relPath
+end _GitPath
+
+private function _ConstructParamList sHandler
+   put word 1 to -1 of line 1 of sHandler into hLine
    if word 1 of hLine = "private" then delete word 1 of hLine
    put word 3 to -1 of hLine into paramList
    replace "[" with empty in paramList
@@ -263,3 +375,25 @@ private function _ConstructParamList someHandler
    delete char -1 of paramTable
    return paramTable
 end _ConstructParamList
+
+private function _HandlerYaml hMetaData
+   delete variable hMetaData ["script"]
+   combine hMetaData with CR and ": "
+   return hMetaData
+end _HandlerYaml
+
+private function _WhereYaml whereData
+   combine whereData with CR and ": "
+   return whereData
+end _WhereYaml
+
+private function _StackLinkList hkey, hObject
+   put the stack_Object of hObject into stackObject
+   put hKey_GetArray (hkey) into hkeyArray
+   put hkeyArray_DepStackBulletList (hkeyArray, stackObject) into linkList
+   return linkList
+end _StackLinkList
+
+private function _DefaultDotText hKey
+   return "{{dotText}}"
+end _DefaultDotText

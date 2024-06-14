@@ -109,7 +109,6 @@ function help_ConstructDomain scriptType
    return wikiDomain
 end help_ConstructDomain
 
-
 command help_RenameTemplate @pageArray, pageTitle, pWikiDomain
    put _ForkDomainItems() into forkDomains
    --

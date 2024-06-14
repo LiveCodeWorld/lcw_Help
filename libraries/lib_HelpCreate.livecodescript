@@ -11,41 +11,11 @@ version: 0.1
 This new library is designed for rapid creation of {{wiki-help}} pages.
 */
 
-
---> Move
--
-function wikiPage_Help subDomain, curlyData, pScriptHelp
-   -- subDomain = scriptType 
-   put curlyData ["title"] into pageTitle
-   put help_ConstructDomain (subDomain) into wikiDomain
-   
-   # Fetch Template
-   put wikiTemplate_GetHelp (subDomain) into pageArray
-   if pageArray_Check (pageArray) is false then return empty
-   
-   # Rename
-   help_RenameTemplate pageArray, pageTitle, wikiDomain
-   
-   # Curly Merge
-   curly_MergePageArray pageArray, curlyData
-   if pScriptHelp is not empty then
-      put pageArray ["story"][1]["text"] into oText
-      put pScriptHelp & CR&CR & oText into newFirstPara
-      put newFirstPara into pageArray ["story"][1]["text"]
-   end if
-   
-   
-   # Add Fork
-   pageArray_StripJournal pageArray
-   put url_GetTLD (wikiDomain) into tldDomains
-   put CR & "fedwiki.org" after tldDomains
-   pageArray_AddFork pageArray, tldDomains
-   --
-   return pageArray
-end wikiPage_Help
-
-
 --> Working on
+-
+
+
+--> Props
 -
 getprop curly_Data [pHkey]
    put the long id of the target into sObject
@@ -54,22 +24,45 @@ getprop curly_Data [pHkey]
       put _ObjectCurlyData (sObject) into curlyData
    else
       put the handler_Key [pHkey] of sObject intro hKey
-      put help_HkeyCurlyData (hKey, false) into curlyData
+      put help_HkeyCurlyData (hKey) into curlyData
    end if
    return curlyData
 end curly_Data
 
+function help_ForkDomains scriptType  
+   switch scriptType
+      case "Model"
+         put "handler,library" into subDomains
+         break
+      case "Library"
+         put "handler,model" into subDomains
+         break
+      default
+         put "handler,model,library" into subDomains
+   end switch
+   put ",behavior,project" after subDomains
+   
+   repeat for each item subDomain in subDomains
+      put subDomain & ".livecode.world" & CR after forkDomains
+   end repeat
+   delete char -1 of forkDomains
+   return forkDomains
+end help_ForkDomains
+
 getprop help_PageArray
    put the long id of the target into sObject
    --
-   put the curly_Data of sObject into curlyData
+   -- put the curly_Data of sObject into curlyData
+   put _ObjectCurlyData (sObject) into curlyData
    --
    put curlyData ["title"] into pageTitle
    put curlyData ["scriptType"] into scriptType
+   put curlyData ["all"]["scriptHelp"] into scriptHelp
    put curlyData ["stackName"] into stackName
    
    # Construct
-   put wikiPage_Help (scriptType, curlyData) into pageArray
+   put help_ForkDomains (scriptType) into forkDomains
+   put wikiPage_Help (scriptType, curlyData, scriptHelp, forkDomains) into pageArray
    
    # Check
    if pageArray_Check (pageArray) is false then
@@ -82,11 +75,40 @@ getprop help_PageArray
 end help_PageArray
 
 
---> Display | Ghost
---
-command draft_ScriptHelp sObject
+--> Display
+-
+command launch_ObjectHelp tObject, pDisplayObject
+   put the help_Url [true] of tObject into helpURL
+   if helpURL is empty then
+      put the name of tObject into oName
+      if exists (pDisplayObject) is false then
+         put rev_ScriptEditorStack () into pDisplayObject
+      end if
+      lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", pDisplayObject, oName
+      
+      ask_PushGithub tObject
+      help_CreateFromObject tObject
+      put the help_Url [true] of tObject into helpURL
+   end if
+   --
+   launch url helpURL
+   return helpURL
+end launch_ObjectHelp
+
+
+--> Draft
+-
+command draft_ProjectHelp sObject
    put the help_PageArray of sObject into helpPageArray
    -- comment 
+   put the help_Domain of sObject into wikiDomain
+   draft_PageArray wikiDomain, helpPageArray
+   put the result into wikiBrowser
+   return wikiBrowser
+end draft_ProjectHelp
+
+command draft_ScriptHelp sObject
+   put the help_PageArray of sObject into helpPageArray
    put the help_Domain of sObject into wikiDomain
    draft_PageArray wikiDomain, helpPageArray
    put the result into wikiBrowser
@@ -121,24 +143,6 @@ end draft_PageArray
 
 --> Help | Create | Object
 -
-command launch_ObjectHelp tObject, pDisplayObject
-   put the help_Url [true] of tObject into helpURL
-   if helpURL is empty then
-      put the name of tObject into oName
-      if exists (pDisplayObject) is false then
-         put rev_ScriptEditorStack () into pDisplayObject
-      end if
-      lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", pDisplayObject, oName
-      
-      ask_PushGithub tObject
-      help_CreateFromObject tObject
-      put the help_Url [true] of tObject into helpURL
-   end if
-   --
-   launch url helpURL
-   return helpURL
-end launch_ObjectHelp
-
 command help_CreateFromObject sObject
    put the script_Type of sObject into scriptType
    switch scriptType
@@ -210,10 +214,8 @@ private function _ObjectCurlyData sObject
    --
    put the long id of the target into sObject
    put the script_MetaData of sObject into sMetaData
-   --
    
    # YAML
-   -- put the object_Yaml of sObject into curlyData ["all"]["objectYaml"]
    _ProcessScriptMetadata sMetaData, scriptHelp, scriptYaml
    --
    curly_SetAll curlyData, "scriptYaml", scriptYaml
@@ -246,12 +248,19 @@ private function _ObjectCurlyData sObject
       case "transport"
       case "library"
       default
-         # Deps
-         -- put the script_MarkdownHandlerindex of tObject into curlyData ["all"]["Handler List"]
-         -- put the script_Deps of tObject into curlyData ["all"]["Stack Deps"]
-         
+         # Domain
          put help_ConstructDomain (scriptType) into wikiDomain
          curly_SetAll curlyData, "wikiDomain", wikiDomain
+         
+         # Deps
+         put script_GetHkeyArray (sObject) into hKeyArray
+         --
+         put hkeyArray_DepProjects (hkeyArray, sObject) into depProjects
+         put markdown_LinkedBullets (depProjects) into projectBullets
+         put hkeyArray_DepStackBulletList (hkeyArray, sObject) into stackDeps
+         --
+         curly_SetAll curlyData, "projectDeps", projectBullets
+         curly_SetAll curlyData, "stackDeps", stackDeps
          
          # Work out Page Title
          put help_ConstructTitle (stackName, scriptType) into pageTitle 
@@ -262,6 +271,7 @@ private function _ObjectCurlyData sObject
    
    # Keywords
    put the script_HandlerNames [true] of sObject into handlerNames
+   put handler_ConstructKeyWordList (handlerNames) into keywordList
    curly_SetAll curlyData, "keywordList", keywordList
    
    # Related libraries and models
@@ -280,12 +290,9 @@ private function _ObjectCurlyData sObject
    # Github
    put the github_LaunchURL of sObject into githubLaunchURL
    curly_SetAll curlyData, "github_LaunchURL", githubLaunchURL
-   -- curly_SetAll curlyData, "github_ProjectURL", the github_ProjectURL of sObject
    
    # Github Paragraph
-   -- put the name of sObject into oName
    put merge ("View source code over at [" & githubLaunchURL && "github" & "]") into githubPara
-   --
    curly_SetAll curlyData, "githubPara", githubPara
    
    # Dot
@@ -355,16 +362,9 @@ private command _AddProjectData @curlyData, sObject, projectName
    return pageTitle
 end _AddProjectData
 
-function project_ConstructPageTitle projectName
-   put curlyData ["projectName"] into projectName
-   replace "lcw_" with empty in projectName
-   put "Project" && projectName into pageTitle
-   return pageTitle
-end project_ConstructPageTitle
-
 private function _ProjectComponents projectName
    put project_GetStackNameArray (projectName) into stackNameArray
-   repeat for each item shortFolder in "Libraries,Models,Controllers,Modules,Views"
+   repeat for each item shortFolder in "Modules,Models,Libraries,Controllers,Views"
       put stackNameArray [shortFolder] into sArray
       put the keys of sArray into someIndex
       if someIndex is empty then next repeat
@@ -386,3 +386,19 @@ end _ModuleBullets
 private function _ProjectTags
    return projectTags
 end _ProjectTags
+
+
+--> Deps
+-
+function handler_ConstructKeyWordList hNameList
+   replace comma with CR in hNameList
+   --
+   repeat for each line hName in hNameList
+      put project_ConstructKeywords (hName) into tagItems
+      get markdown_TagItems (tagItems)
+      put it & CR after keyWordLinks
+   end repeat
+   delete item -1 of keyWordLinks
+   replace CR with ", " in keyWordLinks
+   return keyWordLinks
+end handler_ConstructKeyWordList
