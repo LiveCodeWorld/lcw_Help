@@ -73,7 +73,7 @@ on menu_CreateHelpWiki sObject
    put the help_Domain of sObject into wikiDomain
    put lcw_Ask ("Create new wiki...", wikiDomain, "New Wiki") into wikiDomain
    --
-   wikiServer_Create wikiDomain
+   wikiSite_Create wikiDomain
    display_LocalWikis "", "", "*livecode.world"
 end menu_CreateHelpWiki
 

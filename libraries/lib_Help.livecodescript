@@ -15,34 +15,28 @@ As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 
 --> Working on
 -
-function wikiTemplate_GetHelp subDomain
-   put subDomain & ".livecode.world" into wikiDomain
-   put subDomain & "-" & "template" into pageSlug
+function wikiTemplate_GetHelp subDomain, pStripJournal
+   put help_ConstructDomain (subDomain) into wikiDomain
+   put help_ConstructSlug (subDomain) into pageSlug
+   --
    put pageArray_Get (wikiDomain, pageSlug) into pageArray
-   return pageArray
-end wikiTemplate_GetHelp
-
-function help_FetchTemplateArray scriptType, pStripJournal -- old us "wikiTemplate_GetHelp"
-   -- see also "federation_FetchTemplatePageArray"
-   put help_FetchTemplateJson (scriptType) into templateJSON
-   put json_ToArray (templateJSON) into templateArray
+   if pageArray is not an array then
+      put "[[" & fedwiki_ConstructTitle (pageSlug) & "]]" into slugLink
+      put merge ("Ensure there is a page [[slugLink]] of wiki '[[wikiDomain]]...") into mdText
+      put pageArray_Construct  ("Error", mdText, "error") into pageArray
+   end if
+   --
    if pStripJournal is true then
       pageArray_StripJournal templateArray
    end if
-   return templateArray
-end help_FetchTemplateArray
+   return pageArray
+end wikiTemplate_GetHelp
 
-function help_FetchTemplateJson scriptType -- old us "wikiTemplate_GetHelp
-   put help_ConstructDomain (scriptType) into fedwikiDomain
-   script_FixType scriptType
-   put scriptType & "-" & "template" into pageSlug
-   put pageJson_Fetch (fedwikiDomain, pageSlug) into pageJSON
-   return pageJSON
-end help_FetchTemplateJson
-
-private function _ForkDomainItems
-   return "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,project.livecode.world,fedwiki.org"
-end _ForkDomainItems
+function help_ConstructSlug subDomain
+   _FixType subDomain
+   put subDomain & "-" & "template" into pageSlug
+   return pageSlug
+end help_ConstructSlug
 
 
 --> CurlyData
@@ -104,7 +98,7 @@ end help_GetTags
 --> Help | Template | Model
 -
 function help_ConstructDomain scriptType
-   script_FixType scriptType
+   _FixType scriptType
    put scriptType & ".livecode.world" into wikiDomain
    return wikiDomain
 end help_ConstructDomain
@@ -163,7 +157,10 @@ function help_ConstructURL stackName, scriptType, pCheckURL
    return someURL
 end help_ConstructURL
 
-command script_FixType @scriptType
+
+--> Private
+-
+private command _FixType @scriptType
    switch scriptType
       case "home"
          put "project" into scriptType
@@ -171,5 +168,12 @@ command script_FixType @scriptType
       case "controller"
          put "menu" into scriptType
          break
+      case "view"
+         put "module" into scriptType
+         break
    end switch
-end script_FixType
+end _FixType
+
+private function _ForkDomainItems
+   return "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,project.livecode.world,fedwiki.org"
+end _ForkDomainItems

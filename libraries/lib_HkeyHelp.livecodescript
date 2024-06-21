@@ -7,7 +7,71 @@ name: lib_HkeyHelp
 type: library
 version: 0.2
 
-/*Some help*/
+/* A library to automate teh creation of help for Livecode handlers.
+*/
+
+
+--> Move
+-
+function project_FolderTokind shortFolder
+   -- singular form plural
+   switch
+      case shortFolder = "libraries"
+         return "library"
+      case char -1 of shortFolder = "s"
+         delete char -1 of shortFolder
+         return shortFolder
+      default
+         return shortFolder
+   end switch
+end project_FolderTokind
+
+
+--> Working on
+-
+function camelcase_BulletList hNameList
+   local kWordArray
+   replace comma with CR in hNameList
+   --
+   repeat for each line hName in hNameList
+      put text_SplitIntoWords (hName) into kWords
+      put toLower (kWords) into kWords
+      split kWords with CR as set
+      --
+      union kWordArray with kWords 
+   end repeat
+   put keys (kWordArray) into tagItems
+   --
+   put markdown_TagItems (tagItems) into keyWordLinks
+   -- replace CR with ", " in keyWordLinks
+   return keyWordLinks
+end camelcase_BulletList
+
+function handler_KeyWordsFromName hName
+   put text_SplitIntoWords (hName) into kWords
+   put toLower (kWords) into kWords
+   return kWords
+end handler_KeyWordsFromName
+
+private function _ConstructHandlerTags hKey
+   local handlerTagList
+   
+   put hkey_ConstructKeywords (hKey) into handlerTags
+   if pUpdate is true then
+      put comma after handlerTags
+      put help_GetHkeyTags (hkey) into lcwHandlerTags
+      repeat for each item lcwHandlerTag in lcwHandlerTags
+         if lcwHandlerTag is not among the items of handlerTags then
+            put lcwHandlerTag & comma after handlerTags
+         end if
+      end repeat
+      delete char -1 of handlerTags
+   end if
+   --
+   put markdown_TagItems (handlerTags, "from,to") into handlerTagList
+   --
+   return handlerTagList
+end _ConstructHandlerTags
 
 
 --> Props
@@ -43,6 +107,37 @@ function script_SingularType pluralType
    end switch
 end script_SingularType
 
+getprop script_WhereYaml
+   put the script_WhereData of hObject into whereYaml
+   combine whereYaml with CR and ": "
+   return whereYaml
+end script_WhereYaml
+
+getprop script_WhereData
+   put the long id of the target into sObject
+   
+   # Collect script info
+   put the project_Name of sObject into projectName
+   put the module_Name of sObject into moduleName
+   put the name of sObject into whereData ["Script"]
+   --
+   put _GitPath (sObject) into relPath
+   put _ShortFile (relPath) into shortFile
+   put _KindFromPath (relPath) into sKind
+   -- put _ShortFolder (relPath) into sKind
+   
+   # Construct whereData
+   put projectName into whereData ["Project"]
+   if moduleName is not empty then
+      put moduleName into whereData ["Module"]
+   end if
+   put sKind into whereData ["Kind"]
+   put shortFile into whereData ["File"]
+   put relPath into whereData ["Path"]
+   --
+   return whereData
+end script_WhereData
+
 function handler_WhereData hKey
    local handlerMetaData
    --
@@ -50,6 +145,8 @@ function handler_WhereData hKey
    put the result into shortHkey
    if exists (hObject) is false then return "Error, object does not exist:" && hObject
    
+   put the script_WhereData of hObject into hMetaData
+   /*
    put the project_Name of hObject into projectName
    put the module_Name of hObject into moduleName
    --
@@ -57,8 +154,6 @@ function handler_WhereData hKey
    put _ShortFolder (relPath) into libType
    put _ShortFile (relPath) into shortFile
    
-   put word 1 to 2 of shortHkey into hMetaData ["Hkey"]
-   put the name of hObject into hMetaData ["Script"]
    put projectName into hMetaData ["Project"]
    if moduleName is not empty then
       put moduleName into hMetaData ["Module"]
@@ -66,6 +161,9 @@ function handler_WhereData hKey
    put libType into hMetaData ["Kind"]
    put shortFile into hMetaData ["File"]
    put relPath into hMetaData ["Path"]
+   */
+   put word 1 to 2 of shortHkey into hMetaData ["Hkey"]
+   put the name of hObject into hMetaData ["Script"]
    --
    return hMetaData
 end handler_WhereData
@@ -278,26 +376,6 @@ end help_SetPageArrayHandler
 
 --> Private
 -
-private function _ConstructHandlerTags hKey
-   local handlerTagList
-   
-   put hkey_ConstructKeywords (hKey) into handlerTags
-   if pUpdate is true then
-      put comma after handlerTags
-      put help_GetHkeyTags (hkey) into lcwHandlerTags
-      repeat for each item lcwHandlerTag in lcwHandlerTags
-         if lcwHandlerTag is not among the items of handlerTags then
-            put lcwHandlerTag & comma after handlerTags
-         end if
-      end repeat
-      delete char -1 of handlerTags
-   end if
-   --
-   put markdown_TagItems (handlerTags, "from,to") into handlerTagList
-   --
-   return handlerTagList
-end _ConstructHandlerTags
-
 private function _ConstructCallList sHandler, pIncludePrivate
    # Extract calls from handler
    put handler_ExtractCalls (sHandler) into shortCalls
@@ -351,10 +429,19 @@ private function _ShortFolder relPath
    return item -2 of relPath
 end _ShortFolder
 
+function _KindFromPath relPath
+   set the itemdelimiter to slash
+   put item 1 of relPath into shortFolder
+   put project_FolderTokind (shortFolder) into projectFolderKind
+   return projectFolderKind
+end _KindFromPath
+
 private function _GitPath hObject
    -- put the github_RelativePath of hObject into relPath
    put the stack_Folder of stack "LCW" into gitFolder
-   put the filename of hObject into sFile
+   --
+   put the stack_Name of hObject into stackName
+   put the effective filename of stack stackName into sFile
    --
    set the itemdelimiter to slash
    put the number of items of gitFolder + 1 into sNum

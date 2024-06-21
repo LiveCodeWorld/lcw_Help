@@ -13,6 +13,25 @@ This new library is designed for rapid creation of {{wiki-help}} pages.
 
 --> Working on
 -
+private command _AddkeyWords @curlyData, sObject, scriptType
+   switch scriptType
+      case "view"
+      case "module"
+         put the behavior_Objects of sObject into bObjects
+         repeat for each line bObject in bObjects
+            put the script_HandlerNames [true] of bObject & CR after handlerNames
+         end repeat
+         delete char -1 of handlerNames
+         break
+      default
+         put the script_HandlerNames [true] of sObject into handlerNames
+   end switch
+   --
+   put camelcase_BulletList (handlerNames) into keywordList
+   -- put markdown_LinkedBullets (handlerNames) into keywordList
+   curly_SetAll curlyData, "keywordList", keywordList
+end _AddkeyWords
+
 
 
 --> Props
@@ -98,9 +117,25 @@ end launch_ObjectHelp
 
 --> Draft
 -
+command draft_ModuleHelp moduleName
+   put view_GetTemplateObject (moduleName) into mObject
+   if exists (mObject) is false then
+      breakpoint
+      return "Error, cannot find module:" && moduleName
+   end if
+   --
+   put the help_PageArray of mObject into helpPageArray
+   --
+   -- put the help_Domain of mObject into wikiDomain
+   put "module.livecode.world" into wikiDomain
+   draft_PageArray wikiDomain, helpPageArray
+   put the result into wikiBrowser
+   return wikiBrowser
+end draft_ModuleHelp
+
 command draft_ProjectHelp sObject
    put the help_PageArray of sObject into helpPageArray
-   -- comment 
+   -- 
    put the help_Domain of sObject into wikiDomain
    draft_PageArray wikiDomain, helpPageArray
    put the result into wikiBrowser
@@ -213,7 +248,9 @@ private function _ObjectCurlyData sObject
    local curlyData, scriptHelp, scriptYaml
    --
    put the long id of the target into sObject
-   put the script_MetaData of sObject into sMetaData
+   put the script_MetaData of sObject into sMetaData   
+   --
+   put sMetaData ["type"] into scriptType
    
    # YAML
    _ProcessScriptMetadata sMetaData, scriptHelp, scriptYaml
@@ -221,10 +258,17 @@ private function _ObjectCurlyData sObject
    curly_SetAll curlyData, "scriptYaml", scriptYaml
    curly_SetAll curlyData, "scriptHelp", scriptHelp
    
+   # Metadata and Where Yaml
+   -- put the script_WhereYaml of sObject into whereYaml
+   put the script_WhereData of sObject into whereData
+   put whereData into whereYaml
+   combine whereYaml with CR and ": "
+   curly_SetAll curlyData, "whereYaml", whereYaml
+   
    # Object
    put the stack_Name of sObject into stackName
-   put the project_Name of sObject into projectName
-   put sMetaData ["type"] into scriptType
+   put whereData ["Project"] into projectName
+   -- put the project_Name of sObject into projectName
    --
    put scriptType into curlyData ["scriptType"]
    put projectName into curlyData ["projectName"]
@@ -270,9 +314,7 @@ private function _ObjectCurlyData sObject
    put pageTitle into curlyData ["title"]
    
    # Keywords
-   put the script_HandlerNames [true] of sObject into handlerNames
-   put handler_ConstructKeyWordList (handlerNames) into keywordList
-   curly_SetAll curlyData, "keywordList", keywordList
+   _AddkeyWords curlyData, sObject, scriptType
    
    # Related libraries and models
    put help_RelatedStacks (stackName) into stackIndex
@@ -386,19 +428,3 @@ end _ModuleBullets
 private function _ProjectTags
    return projectTags
 end _ProjectTags
-
-
---> Deps
--
-function handler_ConstructKeyWordList hNameList
-   replace comma with CR in hNameList
-   --
-   repeat for each line hName in hNameList
-      put project_ConstructKeywords (hName) into tagItems
-      get markdown_TagItems (tagItems)
-      put it & CR after keyWordLinks
-   end repeat
-   delete item -1 of keyWordLinks
-   replace CR with ", " in keyWordLinks
-   return keyWordLinks
-end handler_ConstructKeyWordList
