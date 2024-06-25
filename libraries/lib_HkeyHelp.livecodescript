@@ -76,7 +76,29 @@ end _ConstructHandlerTags
 
 --> Props
 -
-getprop script_MarkdownHandlerIndex
+getprop handler_Bullets [withPrivate]
+   put the long id of the target into hObject
+   put the revAvailableHandlers of hObject into hTable
+   repeat for each line hTableLine in hTable
+      put word 1 of hTableLine into hType
+      put word 2 of hTableLine into hName
+      
+      switch
+         case withPrivate is true
+            put "- [[" & hName & "]]" & CR after markdownIndex
+            break
+         case char 1 of hType = "P"
+         case char 1 of hName = "_"
+            next repeat
+         default
+            put "- [[" & hName & "]]" & CR after markdownIndex
+      end switch
+   end repeat
+   delete char -1 of markdownIndex
+   return markdownIndex
+end handler_Bullets
+
+getprop handler_GithubBullets
    put the long id of the target into hObject
    put the revAvailableHandlers of hObject into hTable
    repeat for each line hTableLine in hTable
@@ -92,7 +114,7 @@ getprop script_MarkdownHandlerIndex
    end repeat
    delete char -1 of markdownIndex
    return markdownIndex
-end script_MarkdownHandlerindex
+end handler_GithubBullets
 
 
 --> Working on

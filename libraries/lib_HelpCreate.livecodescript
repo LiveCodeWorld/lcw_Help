@@ -68,11 +68,10 @@ function help_ForkDomains scriptType
    return forkDomains
 end help_ForkDomains
 
-getprop help_PageArray
+getprop help_PageArray [pOverlayName]
    put the long id of the target into sObject
    --
-   -- put the curly_Data of sObject into curlyData
-   put _ObjectCurlyData (sObject) into curlyData
+   put _ObjectCurlyData (sObject, pOverlayName) into curlyData
    --
    put curlyData ["title"] into pageTitle
    put curlyData ["scriptType"] into scriptType
@@ -81,7 +80,7 @@ getprop help_PageArray
    
    # Construct
    put help_ForkDomains (scriptType) into forkDomains
-   put wikiPage_Help (scriptType, curlyData, scriptHelp, forkDomains) into pageArray
+   put wikiPage_Help (scriptType, curlyData, scriptHelp, forkDomains, pOverlayName) into pageArray
    
    # Check
    if pageArray_Check (pageArray) is false then
@@ -117,14 +116,14 @@ end launch_ObjectHelp
 
 --> Draft
 -
-command draft_ModuleHelp moduleName
+command draft_ModuleHelp moduleName, pOverlayName
    put view_GetTemplateObject (moduleName) into mObject
    if exists (mObject) is false then
       breakpoint
       return "Error, cannot find module:" && moduleName
    end if
    --
-   put the help_PageArray of mObject into helpPageArray
+   put the help_PageArray [pOverlayName] of mObject into helpPageArray
    --
    -- put the help_Domain of mObject into wikiDomain
    put "module.livecode.world" into wikiDomain
@@ -133,8 +132,8 @@ command draft_ModuleHelp moduleName
    return wikiBrowser
 end draft_ModuleHelp
 
-command draft_ProjectHelp sObject
-   put the help_PageArray of sObject into helpPageArray
+command draft_ProjectHelp sObject, pOverlayName
+   put the help_PageArray [pOverlayName] of sObject into helpPageArray
    -- 
    put the help_Domain of sObject into wikiDomain
    draft_PageArray wikiDomain, helpPageArray
@@ -142,8 +141,8 @@ command draft_ProjectHelp sObject
    return wikiBrowser
 end draft_ProjectHelp
 
-command draft_ScriptHelp sObject
-   put the help_PageArray of sObject into helpPageArray
+command draft_ScriptHelp sObject, pOverlayName
+   put the help_PageArray [pOverlayName] of sObject into helpPageArray
    put the help_Domain of sObject into wikiDomain
    draft_PageArray wikiDomain, helpPageArray
    put the result into wikiBrowser
@@ -244,13 +243,24 @@ end help_StorePageArray
 
 --> Private
 -
-private function _ObjectCurlyData sObject
+private function _ObjectCurlyData sObject, pOverlayName
    local curlyData, scriptHelp, scriptYaml
    --
+   if pOverlayName is empty then put "fdp" into pOverlayName -- layoutType = neato
+   
    put the long id of the target into sObject
    put the script_MetaData of sObject into sMetaData   
-   --
    put sMetaData ["type"] into scriptType
+   
+   # Dot
+   put the script_DotText [pOverlayName] of sObject into dotText
+   if dotText is not empty then
+      put the script_LinkArray of sObject into hkeyArray
+      --
+      put "		layout=" & layoutType & ";" & CR before line 3 of dotText
+      
+      curly_SetAll curlyData, "dotText", dotText
+   end if
    
    # YAML
    _ProcessScriptMetadata sMetaData, scriptHelp, scriptYaml
@@ -268,8 +278,6 @@ private function _ObjectCurlyData sObject
    # Object
    put the stack_Name of sObject into stackName
    put whereData ["Project"] into projectName
-   -- put the project_Name of sObject into projectName
-   --
    put scriptType into curlyData ["scriptType"]
    put projectName into curlyData ["projectName"]
    put stackName into curlyData ["stackName"]
@@ -289,6 +297,7 @@ private function _ObjectCurlyData sObject
          _AddProjectData curlyData, sObject, projectName
          put the result into pageTitle
          break
+      case "behavior"
       case "transport"
       case "library"
       default
@@ -321,12 +330,15 @@ private function _ObjectCurlyData sObject
    put markdown_LinkedBullets (stackIndex) into relatedBullets
    curly_SetAll curlyData, "relatedBullets", relatedBullets
    
-   # Handlers and Calls
-   put the script_ExternalCalls of sObject into externalCalls
-   put markdown_LinkedBullets (handlerNames) into handlerBullets   
-   put fedwiki_HkeyMarkdownIndex (externalCalls) into externalBullets
-   --
+   # Handlers
+   -- put the handler_GithubBullets of sObject into handlerBullets
+   put the handler_Bullets of sObject into handlerBullets
+   -- put markdown_LinkedBullets (handlerNames) into handlerBullets   
    curly_SetAll curlyData, "handlerBullets", handlerBullets
+   
+   # External Calls
+   put the script_ExternalCalls of sObject into externalCalls
+   put fedwiki_HkeyMarkdownIndex (externalCalls) into externalBullets
    curly_SetAll curlyData, "externalCalls", externalBullets
    
    # Github
@@ -337,14 +349,6 @@ private function _ObjectCurlyData sObject
    put merge ("View source code over at [" & githubLaunchURL && "github" & "]") into githubPara
    curly_SetAll curlyData, "githubPara", githubPara
    
-   # Dot
-   put the script_DotText of sObject into dotText
-   if dotText is not empty then
-      put the script_LinkArray of sObject into hkeyArray
-      --
-      put "		layout=neato;" & CR before line 3 of dotText
-      curly_SetAll curlyData, "dotText", dotText
-   end if
    return curlyData
 end _ObjectCurlyData
 
@@ -374,7 +378,9 @@ command _AddIDE @curlyData, sObject, stackName
    -- curly_SetAll curlyData, relFolder, "rel folder"
    -- curly_SetAll curlyData, shortFile, "short file"
    
-   curly_SetAll curlyData, "Handler List", the script_MarkdownHandlerindex of sObject
+   put the handler_Bullets of sObject into handlerBullets
+   -- put the handler_GithubBullets of sObject into handlerBullets
+   curly_SetAll curlyData, "Handler List", handlerBullets
    curly_SetAll curlyData, "title", stackName
    return stackName
 end _AddIDE
