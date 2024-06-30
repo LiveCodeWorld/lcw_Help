@@ -40,13 +40,122 @@ getprop curly_Data [pHkey]
    put the long id of the target into sObject
    --
    if pHkey is empty then
-      put _ObjectCurlyData (sObject) into curlyData
+      put the object_CurlyData of sObject into curlyData
    else
       put the handler_Key [pHkey] of sObject intro hKey
       put help_HkeyCurlyData (hKey) into curlyData
    end if
    return curlyData
 end curly_Data
+
+getprop object_CurlyData [pGraphStyle]
+   local curlyData, scriptHelp, scriptYaml
+   put the long id of the target into sObject
+   
+   # Script Metadata
+   put the long id of the target into sObject
+   put the script_MetaData of sObject into sMetaData   
+   put sMetaData ["type"] into scriptType
+   
+   # Dot
+   put the script_DotText [pGraphStyle] of sObject into dotText
+   if dotText is empty then
+      put "digraph G {Dot->Empty}" into dotText
+   else
+      -- put dot_LayoutEngine (pGraphStyle) into layoutEngine
+      -- put "		layout=" & layoutEngine & ";" & CR before line 3 of dotText
+      dot_AddLayout dotText, pGraphStyle
+   end if
+   curly_SetAll curlyData, "dotText", dotText
+   
+   # YAML
+   _ProcessScriptMetadata sMetaData, scriptHelp, scriptYaml
+   curly_SetAll curlyData, "scriptYaml", scriptYaml
+   curly_SetAll curlyData, "scriptHelp", scriptHelp
+   
+   # Metadata and Where Yaml
+   put the script_WhereData of sObject into whereData
+   put whereData into whereYaml
+   combine whereYaml with CR and ": "
+   curly_SetAll curlyData, "whereYaml", whereYaml
+   
+   # Object
+   put the stack_Name of sObject into stackName
+   put whereData ["Project"] into projectName
+   put scriptType into curlyData ["scriptType"]
+   put projectName into curlyData ["projectName"]
+   put stackName into curlyData ["stackName"]
+   --
+   switch scriptType
+      case "menu"
+      case "controller"
+         _AddController curlyData, sObject, stackName
+         put the result into pageTitle
+         break
+      case "ide"
+         _AddIDE curlyData, sObject, stackName
+         put the result into pageTitle
+         break
+      case "home"
+      case "project"
+         _AddProjectData curlyData, sObject, projectName
+         put the result into pageTitle
+         break
+      case "behavior"
+      case "transport"
+      case "library"
+      default
+         # Domain
+         put help_ConstructDomain (scriptType) into wikiDomain
+         curly_SetAll curlyData, "wikiDomain", wikiDomain
+         
+         # Deps
+         put script_GetHkeyArray (sObject) into hKeyArray
+         -- put the script_LinkArray of sObject into hkeyArray
+         --
+         put hkeyArray_DepProjects (hkeyArray, sObject) into depProjects
+         put markdown_LinkedBullets (depProjects) into projectBullets
+         put hkeyArray_DepStackBulletList (hkeyArray, sObject) into stackDeps
+         --
+         curly_SetAll curlyData, "projectDeps", projectBullets
+         curly_SetAll curlyData, "stackDeps", stackDeps
+         
+         # Work out Page Title
+         put help_ConstructTitle (stackName, scriptType) into pageTitle 
+   end switch
+   --
+   curly_SetAll curlyData, "title", pageTitle
+   put pageTitle into curlyData ["title"]
+   
+   # Keywords
+   _AddkeyWords curlyData, sObject, scriptType
+   
+   # Related libraries and models
+   put help_RelatedStacks (stackName) into stackIndex
+   put markdown_LinkedBullets (stackIndex) into relatedBullets
+   curly_SetAll curlyData, "relatedBullets", relatedBullets
+   
+   # Handlers
+   -- put the handler_GithubBullets of sObject into handlerBullets
+   put the handler_Bullets of sObject into handlerBullets
+   -- put markdown_LinkedBullets (handlerNames) into handlerBullets   
+   curly_SetAll curlyData, "handlerBullets", handlerBullets
+   
+   # External Calls
+   put the script_ExternalCalls of sObject into externalCalls
+   put fedwiki_HkeyMarkdownIndex (externalCalls) into externalBullets
+   curly_SetAll curlyData, "externalCalls", externalBullets
+   
+   # Github
+   put the github_LaunchURL of sObject into githubLaunchURL
+   curly_SetAll curlyData, "github_LaunchURL", githubLaunchURL
+   
+   # Github Paragraph
+   put merge ("View source code over at [" & githubLaunchURL && "github" & "]") into githubPara
+   curly_SetAll curlyData, "githubPara", githubPara
+   
+   return curlyData
+end object_CurlyData
 
 function help_ForkDomains scriptType  
    switch scriptType
@@ -59,7 +168,7 @@ function help_ForkDomains scriptType
       default
          put "handler,model,library" into subDomains
    end switch
-   put ",behavior,project" after subDomains
+   put ",behavior,project,module" after subDomains
    
    repeat for each item subDomain in subDomains
       put subDomain & ".livecode.world" & CR after forkDomains
@@ -70,15 +179,15 @@ end help_ForkDomains
 
 getprop help_PageArray [pOverlayName]
    put the long id of the target into sObject
-   --
-   put _ObjectCurlyData (sObject, pOverlayName) into curlyData
-   --
+   
+   # CurlyData
+   put the object_CurlyData [pOverlayName] of sObject into curlyData
    put curlyData ["title"] into pageTitle
    put curlyData ["scriptType"] into scriptType
    put curlyData ["all"]["scriptHelp"] into scriptHelp
    put curlyData ["stackName"] into stackName
    
-   # Construct
+   # PageArray
    put help_ForkDomains (scriptType) into forkDomains
    put wikiPage_Help (scriptType, curlyData, scriptHelp, forkDomains, pOverlayName) into pageArray
    
@@ -243,115 +352,6 @@ end help_StorePageArray
 
 --> Private
 -
-private function _ObjectCurlyData sObject, pOverlayName
-   local curlyData, scriptHelp, scriptYaml
-   --
-   if pOverlayName is empty then put "fdp" into pOverlayName -- layoutType = neato
-   
-   put the long id of the target into sObject
-   put the script_MetaData of sObject into sMetaData   
-   put sMetaData ["type"] into scriptType
-   
-   # Dot
-   put the script_DotText [pOverlayName] of sObject into dotText
-   if dotText is not empty then
-      put the script_LinkArray of sObject into hkeyArray
-      --
-      put "		layout=" & layoutType & ";" & CR before line 3 of dotText
-      
-      curly_SetAll curlyData, "dotText", dotText
-   end if
-   
-   # YAML
-   _ProcessScriptMetadata sMetaData, scriptHelp, scriptYaml
-   --
-   curly_SetAll curlyData, "scriptYaml", scriptYaml
-   curly_SetAll curlyData, "scriptHelp", scriptHelp
-   
-   # Metadata and Where Yaml
-   -- put the script_WhereYaml of sObject into whereYaml
-   put the script_WhereData of sObject into whereData
-   put whereData into whereYaml
-   combine whereYaml with CR and ": "
-   curly_SetAll curlyData, "whereYaml", whereYaml
-   
-   # Object
-   put the stack_Name of sObject into stackName
-   put whereData ["Project"] into projectName
-   put scriptType into curlyData ["scriptType"]
-   put projectName into curlyData ["projectName"]
-   put stackName into curlyData ["stackName"]
-   --
-   switch scriptType
-      case "menu"
-      case "controller"
-         _AddController curlyData, sObject, stackName
-         put the result into pageTitle
-         break
-      case "ide"
-         _AddIDE curlyData, sObject, stackName
-         put the result into pageTitle
-         break
-      case "home"
-      case "project"
-         _AddProjectData curlyData, sObject, projectName
-         put the result into pageTitle
-         break
-      case "behavior"
-      case "transport"
-      case "library"
-      default
-         # Domain
-         put help_ConstructDomain (scriptType) into wikiDomain
-         curly_SetAll curlyData, "wikiDomain", wikiDomain
-         
-         # Deps
-         put script_GetHkeyArray (sObject) into hKeyArray
-         --
-         put hkeyArray_DepProjects (hkeyArray, sObject) into depProjects
-         put markdown_LinkedBullets (depProjects) into projectBullets
-         put hkeyArray_DepStackBulletList (hkeyArray, sObject) into stackDeps
-         --
-         curly_SetAll curlyData, "projectDeps", projectBullets
-         curly_SetAll curlyData, "stackDeps", stackDeps
-         
-         # Work out Page Title
-         put help_ConstructTitle (stackName, scriptType) into pageTitle 
-   end switch
-   --
-   curly_SetAll curlyData, "title", pageTitle
-   put pageTitle into curlyData ["title"]
-   
-   # Keywords
-   _AddkeyWords curlyData, sObject, scriptType
-   
-   # Related libraries and models
-   put help_RelatedStacks (stackName) into stackIndex
-   put markdown_LinkedBullets (stackIndex) into relatedBullets
-   curly_SetAll curlyData, "relatedBullets", relatedBullets
-   
-   # Handlers
-   -- put the handler_GithubBullets of sObject into handlerBullets
-   put the handler_Bullets of sObject into handlerBullets
-   -- put markdown_LinkedBullets (handlerNames) into handlerBullets   
-   curly_SetAll curlyData, "handlerBullets", handlerBullets
-   
-   # External Calls
-   put the script_ExternalCalls of sObject into externalCalls
-   put fedwiki_HkeyMarkdownIndex (externalCalls) into externalBullets
-   curly_SetAll curlyData, "externalCalls", externalBullets
-   
-   # Github
-   put the github_LaunchURL of sObject into githubLaunchURL
-   curly_SetAll curlyData, "github_LaunchURL", githubLaunchURL
-   
-   # Github Paragraph
-   put merge ("View source code over at [" & githubLaunchURL && "github" & "]") into githubPara
-   curly_SetAll curlyData, "githubPara", githubPara
-   
-   return curlyData
-end _ObjectCurlyData
-
 private command _ProcessScriptMetadata sMetaData, @scriptHelp, @scriptYaml
    put sMetaData ["script_Help"] into scriptHelp
    delete variable sMetaData ["script_Help"]

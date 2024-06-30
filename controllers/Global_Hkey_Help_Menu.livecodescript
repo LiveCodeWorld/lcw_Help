@@ -113,6 +113,13 @@ on menu_DraftHandlerHelp hKey
    draft_HandlerHelp hKey
 end menu_DraftHandlerHelp
 
+-- on menu_ModuleHandlerHelp hKey
+   -- draft_HandlerHelp hKey
+   put help_FromHkey (hKey) into pageArray
+   --
+   draft_WikiPage "handler.livecode.world", pageArray
+end menu_ModuleHandlerHelp
+
 on menu_HandlerHelp hKey
    launch_HkeyHelp hKey
    if the result is empty then
