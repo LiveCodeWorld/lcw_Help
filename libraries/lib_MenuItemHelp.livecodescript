@@ -144,7 +144,9 @@ command help_CreateMenuWikiDomain hKey
    -- fetch, rename and store menuPageArray
    put help_ConstructMenuPageTitle (gMenuTitle) into menuPageTitle
    put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
-   put pageArray_Fetch ("menu.livecode.world", menuPageSlug) into menuPageArray
+   --
+   put platform_WikiDomain ("menu") into wikiDomain
+   put pageArray_Fetch (wikiDomain, menuPageSlug) into menuPageArray
    if menuPageArray is empty then
       return merge ("error, there is no page [[menuPageSlug]] on menu.livecode.world to clone")
    end if
@@ -154,7 +156,9 @@ command help_CreateMenuWikiDomain hKey
    --
    pageArray_Rename menuPageArray, "Welcome Visitors"
    pageArray_StripJournal menuPageArray
-   pageArray_AddFork menuPageArray, "handler.livecode.world,model.livecode.world,fedwiki.org"
+   --
+   put _ForkDomains ("handler,model") into forkDomains
+   pageArray_AddFork menuPageArray, forkDomains
    --
    pageArray_Set menuSubDomain, "welcome-visitors", menuPageArray
    --
@@ -198,7 +202,7 @@ command help_SetHkeyInfo hKey, @wikiDomain, @pageSlug, @pageTitle
          break
       default
          -- not a special handler so add to global library
-         put "handler.livecode.world" into wikiDomain
+         put platform_WikiDomain ("handler") into wikiDomain
          put help_ConstructHandlerTitle (hKey) into pageTitle
          put fedwiki_ConstructSlug (pageTitle) into pageSlug
    end switch
@@ -207,15 +211,25 @@ end help_SetHkeyInfo
 
 --> Private
 -
+private function _ForkDomains subNameList
+   put "fedwiki.org" into forkDomains
+   put comma & platform_WikiDomain() after forkDomains
+   --
+   repeat for each item subName in subNameList
+      put comma & platform_WikiDomain (subName) after forkDomains
+   end repeat
+   return forkDomains
+end _ForkDomains
+
 private command _CreateOrUpdateMenuItem hKey, menuSubDomain
-   if fedwiki_WikiExists (menuSubDomain) is true then
-      help_UpdateMenuWikiDomain hKey, "reference"
-      if the result is empty then
-         breakpoint -- should create
-      end if
-   else
-      help_CreateMenuWikiDomain hKey
+if fedwiki_WikiExists (menuSubDomain) is true then
+   help_UpdateMenuWikiDomain hKey, "reference"
+   if the result is empty then
+      breakpoint -- should create
    end if
+else
+   help_CreateMenuWikiDomain hKey
+end if
 end _CreateOrUpdateMenuItem
 
 private command _SetMenuItemHelpInfo hKey, @gMenuTitle, @hkeyPageTitle, @menuSubDomain, @hkeySlug

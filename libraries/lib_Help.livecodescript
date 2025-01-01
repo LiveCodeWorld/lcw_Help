@@ -9,12 +9,22 @@ version: 0.4
 deps: lcw_Wiki
 
 /*
-lcw_Help uses the livecode.world federated wiki to store it's help.
+lcw_Help uses the federated wiki to store it's help.
 As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 */
 
 --> Working on
 -
+private function _ForkDomainItems
+   put "fedwiki.org" into forkDomains
+   --
+   put comma & platform_WikiDomain() after forkDomains
+   repeat for each item subName in "library,model,menu,handler,project"
+      put comma & platform_WikiDomain (subName) after forkDomains
+   end repeat
+   return forkDomains
+end _ForkDomainItems
+
 function wikiTemplate_GetHelp subDomain, pStripJournal
    put help_ConstructDomain (subDomain) into wikiDomain
    put help_ConstructSlug (subDomain) into pageSlug
@@ -99,7 +109,7 @@ end help_GetTags
 -
 function help_ConstructDomain scriptType
    _FixType scriptType
-   put scriptType & ".livecode.world" into wikiDomain
+   put platform_WikiDomain (scriptType) into wikiDomain
    return wikiDomain
 end help_ConstructDomain
 
@@ -173,7 +183,3 @@ private command _FixType @scriptType
          break
    end switch
 end _FixType
-
-private function _ForkDomainItems
-   return "livecode.world,library.livecode.world,model.livecode.world,menu.livecode.world,handler.livecode.world,project.livecode.world,fedwiki.org"
-end _ForkDomainItems

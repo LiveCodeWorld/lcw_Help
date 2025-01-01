@@ -30,7 +30,8 @@ function help_CreateMenuPageArray gMenuTitle, mController, pHow
    put menu_StripGlobal (gMenuTitle) into pageTitle
    
    # Fetch template
-   put pageArray_Fetch ("menu.livecode.world", "menu-template") into pageArray
+   put platform_WikiDomain ("menu") into wikiDomain
+   put pageArray_Fetch (wikiDomain, "menu-template") into pageArray
    
    # Add forks, rename and tidy
    help_RenameTemplate pageArray, pageTitle, wikiDomain
@@ -102,12 +103,15 @@ function help_FetchMenuPageArray gMenuTitle, mController, pHow
 end help_FetchMenuPageArray
 
 function help_FetchMenuTemplate gMenuTitle, mController
-   put "menu.livecode.world" into wikiDomain
+   put platform_WikiDomain ("menu") into wikiDomain
    put help_ConstructMenuPageTitle (gMenuTitle) into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    --
    put pageArray_Fetch (wikiDomain, pageSlug) into pageArray
-   if pageArray is empty then return merge ("Error, there is no page '[[pageTitle]]' on menu.livecode.world to clone!")
+   if pageArray is empty then
+      put platform_WikiDomain ("menu") into wikiDomain
+      return merge ("Error, there is no page '[[pageTitle]]' on [[wikiDomain]] to clone!")
+   end if
    return pageArray
 end help_FetchMenuTemplate
 
@@ -226,7 +230,8 @@ command help_UpdateMenu gMenuTitle, pHow, pMenuController
    put menu_StripGlobal (gMenuTitle) into menuPageTitle
    put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
    --
-   put pageArray_Fetch ("menu.livecode.world", menuPageSlug) into pageArray
+   put platform_WikiDomain ("menu") into wikiDomain
+   put pageArray_Fetch (wikiDomain, menuPageSlug) into pageArray
    if pageArray is empty then return empty
    --
    put help_ConstructMenuStory (gMenuTitle, pHow, pMenuController) into storyArray
@@ -239,9 +244,11 @@ end help_UpdateMenu
 
 function help_FetchMenuHelpArray gMenuTitle
    -- fetch wiki-page in "menu.livecode.world"
+   put platform_WikiDomain ("menu") into wikiDomain
+   --
    put menu_StripGlobal (gMenuTitle) into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   put pageArray_Fetch ("menu.livecode.world", pageSlug) into pageArray
+   put pageArray_Fetch (wikiDomain, pageSlug) into pageArray
    return pageArray
 end help_FetchMenuHelpArray
 
@@ -369,7 +376,8 @@ function help_ConstructHandlerStory mHandlers, pHandlerObject
             put fedwiki_ConstructSlug (hName) into pageSlug
             put menu_CommandToText (hName) into mText
             --
-            pageArray_AddReference pageArray, pageSlug, "handler.livecode.world", mText, hName
+            put platform_WikiDomain ("handler") into wikiDomain
+            pageArray_AddReference pageArray, pageSlug, wikiDomain, mText, hName
             break
          case pHow is "reference"
             put menu_CommandToText (hName) into mText
@@ -407,7 +415,8 @@ function help_MenuWikiDomain pageTitle
       put word 1 to -1 of item itemNum of pageTitle into dBit
       put tolower (dBit) & "." after firstBit
    end repeat
-   put firstBit & "menu.livecode.world" into menuSubDomain
+   put platform_WikiDomain ("menu") into wikiDomain
+   put firstBit & wikiDomain into menuSubDomain
    return menuSubDomain
 end help_MenuWikiDomain
 
@@ -416,7 +425,7 @@ end help_MenuWikiDomain
 -
 function help_ConstructHkeyURL hKey, pCheckURL
    put help_ConstructHandlerSlug (hKey) into pageSlug
-   put "handler.livecode.world" into wikiDomain
+   put platform_WikiDomain ("handler") into wikiDomain
    if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
    --
    put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL

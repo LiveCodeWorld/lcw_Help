@@ -11,6 +11,11 @@ version: 0.1
 This new library is designed for rapid creation of {{wiki-help}} pages.
 */
 
+--> Variables
+-
+constant LcwDomain = "livecode.wiki"
+
+
 --> Working on
 -
 private command _AddkeyWords @curlyData, sObject, scriptType
@@ -171,7 +176,7 @@ function help_ForkDomains scriptType
    put ",behavior,project,module" after subDomains
    
    repeat for each item subDomain in subDomains
-      put subDomain & ".livecode.world" & CR after forkDomains
+      put subDomain & "." & LcwDomain & CR after forkDomains
    end repeat
    delete char -1 of forkDomains
    return forkDomains
@@ -235,7 +240,7 @@ command draft_ModuleHelp moduleName, pOverlayName
    put the help_PageArray [pOverlayName] of mObject into helpPageArray
    --
    -- put the help_Domain of mObject into wikiDomain
-   put "module.livecode.world" into wikiDomain
+   put "module." & LcwDomain into wikiDomain
    draft_PageArray wikiDomain, helpPageArray
    put the result into wikiBrowser
    return wikiBrowser

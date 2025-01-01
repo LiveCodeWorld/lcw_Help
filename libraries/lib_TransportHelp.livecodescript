@@ -1,7 +1,7 @@
 ﻿script "lib_TransportHelp"
 --> MetaData
 -
-copyright: Anonymous
+copyright: David Bovill
 license: GPLv3
 name: lib_TransportHelp
 type: library
@@ -9,9 +9,21 @@ version: 0.1
 
 /*Some help*/
 
+--> Variables
+-
+constant LcwDomain = "livecode.wiki"
+
 
 --> Working on
 -
+function transport_ForkDomains
+   repeat for each item subName in "transport,handler,library,model"
+      put subName & "." & LcwDomain & comma after forkDomains
+   end repeat
+   put ",fedwiki.org" after forkDomains
+   return forkDomains
+end transport_ForkDomains
+
 command help_CreateTransportPage tObject, pageTitle, pScriptHelp
    put "transport" into scriptType
    --
@@ -33,7 +45,7 @@ command help_CreateTransportPage tObject, pageTitle, pScriptHelp
    put the rig_RouteNames of tObject into routeNames
    put help_GetTagItems (routeNames) into curlyData ["all"]["tagNames"]
    put markdown_LinkedBullets (dProjectNames) into curlyData ["all"]["Project Deps"]
-   put "https://rest.livecode.world/" & tName into curlyData ["all"]["restURL"]
+   put "https://" & platform_RestDomain() & "/" & tName into curlyData ["all"]["restURL"]
    
    put pageTitle into curlyData ["title"]
    put wikiPage_Help ("Transport", curlyData, pScriptHelp) into pageArray
@@ -105,7 +117,9 @@ command transport_CreateRouteWelcomeHelp routeHkey
          
          pageArray_Rename pageArray, "Welcome Visitors"
          pageArray_StripJournal pageArray
-         pageArray_AddFork pageArray, "transport.livecode.world,handler.livecode.world,library.livecode.world,model.livecode.world,fedwiki.org"
+         --
+         put transport_ForkDomains() into forkDomains
+         pageArray_AddFork pageArray, forkDomains
          break
       default
          breakpoint -- Welcome-visitors for subdomain already exists so let's update metadata
@@ -123,12 +137,15 @@ command transport_CreateRouteHelp hKey
    put _TransportHkeyCurlyData (hKey) into curlyData
    _TransportInfo hKey, wikiDomain, pageTitle, pageSlug, hObject
    --
-   put pageArray_Fetch ("transport.livecode.world", "transport-route-template") into pageArray
+   put "transport." & LcwDomain into tDomain
+   put pageArray_Fetch (tDomain, "transport-route-template") into pageArray
    pageArray_Rename pageArray, pageTitle
    --
    curly_MergePageArray pageArray, curlyData
    pageArray_StripJournal pageArray
-   pageArray_AddFork pageArray, "transport.livecode.world,handler.livecode.world,library.livecode.world,model.livecode.world,fedwiki.org"
+   --
+   put transport_ForkDomains() into forkDomains
+   pageArray_AddFork pageArray, forkDomains
    --
    pageArray_Set wikiDomain, pageSlug, pageArray
    put the result into shellResult
@@ -184,6 +201,24 @@ end transport_StoreHkeyHelpPageArray
 
 --> Private
 -
+private command _TransportInfo hKey, @transportWikiDomain, @pageTitle, @pageSlug, @hObject
+   put "transport." & platform_WikiDomain() into transportWikiDomain
+   --
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   put the stack_Name of hObject into stackName
+   --
+   if hName = "index" then
+      put help_ConstructTransportTitle (stackName) into pageTitle
+   else
+      set the itemdelimiter to "."
+      put hName into pageTitle
+      put item 1 of stackName into subdomain
+      put tolower (subdomain) & "." before wikiDomain
+   end if
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   return hName
+end _TransportInfo
+
 private function _TransportHkeyCurlyData hKey
    put help_HkeyCurlyData (hKey) into curlyData
    --
@@ -232,7 +267,7 @@ private command _SetCurlyRestURL @curlyData, sObject, hName
    put the stack_Name of sObject into stackName
    set the itemdelimiter to "."
    put item 1 of stackName into shortFile
-   put "https://rest.livecode.world/" & shortFile into restURL
+   put "https://" & platform_RestDomain() & "/" & shortFile into restURL
    if hName is not "index" then
       put slash & hName after restURL
    end if

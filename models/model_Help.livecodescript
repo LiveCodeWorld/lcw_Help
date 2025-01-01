@@ -11,7 +11,7 @@ version: 0.1
 --> Help | Handler | Model
 -
 /*
-Here we reference handlers stared on "handler.livecode.world"
+Here we reference handlers stared at "handler.livecode.wiki"
 We define a new concept "handerArray" to mean a "pageArray" for handlers.
 */
 
@@ -29,14 +29,15 @@ end help_StoreHkeyPageArray
 function help_FetchHandlerPageArray hName
    put fedwiki_ConstructSlug (hName) into pageSlug
    --
-   put pageArray_Fetch ("handler.livecode.world", pageSlug) into pageArray
+   put pageArray_Fetch ("handler.livecode.wiki", pageSlug) into pageArray
    return pageArray
 end help_FetchHandlerPageArray
 
 command help_StoreHandlerPageArray hName, pageArray
    put fedwiki_ConstructSlug (hName) into pageSlug
    --
-   pageArray_Set "handler.livecode.world", pageSlug, pageArray
+   put "handler." & platform_WikiDomain() into handlerDomain
+   pageArray_Set handlerDomain, pageSlug, pageArray
    put the result into shellResult
    return shellResult
 end help_StoreHandlerPageArray
