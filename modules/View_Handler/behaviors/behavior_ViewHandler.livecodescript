@@ -1,9 +1,9 @@
-﻿script "behavior_View_Livecode_Dictionary"
+﻿script "behavior_ViewHandler"
 --> MetaData
 -
 copyright: David Bovill
 license: GPLv3
-name: behavior_View_Livecode_Dictionary
+name: behavior_ViewHandler
 type: behavior
 version: 0.1
 
@@ -11,11 +11,17 @@ version: 0.1
 Full help text can be found on the linked wiki for the view.*/
 
 
+
 --> Working on
 -
 
 --> Events
 -
+on preOpenControl
+   put the name of stack "behavior_ViewTiddlyWiki" into bObject
+   set the behavior of stack "behavior_View_Handler" to bObject
+end preOpenControl
+
 on resizeControl
    put the rect of me into viewRect
    LayoutControl viewRect
