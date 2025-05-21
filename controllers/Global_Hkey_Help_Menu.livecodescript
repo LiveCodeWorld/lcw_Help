@@ -110,7 +110,7 @@ end _RecreateHelp
 --> Global | Hkey | Help | Menu
 -
 on menu_CreateTiddler hKey
-   put tiddlyHandler_PageArray (hKey) into pageArray
+   put draft_HkeyPageArray (hKey) into pageArray
    --
    tiddlyHandler_CreaterHelp pageArray
 end menu_CreateTiddler
