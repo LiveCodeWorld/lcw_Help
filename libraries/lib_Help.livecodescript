@@ -18,9 +18,9 @@ As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 private function _ForkDomainItems
    put "fedwiki.org" into forkDomains
    --
-   put comma & platform_WikiDomain() after forkDomains
+   put comma & platform_LivecodeDomain() after forkDomains
    repeat for each item subName in "library,model,menu,handler,project"
-      put comma & platform_WikiDomain (subName) after forkDomains
+      put comma & platform_LivecodeDomain (subName) after forkDomains
    end repeat
    return forkDomains
 end _ForkDomainItems
@@ -109,7 +109,7 @@ end help_GetTags
 -
 function help_ConstructDomain scriptType
    _FixType scriptType
-   put platform_WikiDomain (scriptType) into wikiDomain
+   put platform_LivecodeDomain (scriptType) into wikiDomain
    return wikiDomain
 end help_ConstructDomain
 

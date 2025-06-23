@@ -202,7 +202,7 @@ end transport_StoreHkeyHelpPageArray
 --> Private
 -
 private command _TransportInfo hKey, @transportWikiDomain, @pageTitle, @pageSlug, @hObject
-   put "transport." & platform_WikiDomain() into transportWikiDomain
+   put "transport." & platform_LivecodeDomain() into transportWikiDomain
    --
    hkey_Deconstruct hKey, hName, hType, hObject, hNum
    put the stack_Name of hObject into stackName

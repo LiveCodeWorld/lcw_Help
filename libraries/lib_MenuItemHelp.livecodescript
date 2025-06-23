@@ -145,7 +145,7 @@ command help_CreateMenuWikiDomain hKey
    put help_ConstructMenuPageTitle (gMenuTitle) into menuPageTitle
    put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
    --
-   put platform_WikiDomain ("menu") into wikiDomain
+   put platform_LivecodeDomain ("menu") into wikiDomain
    put pageArray_Fetch (wikiDomain, menuPageSlug) into menuPageArray
    if menuPageArray is empty then
       return merge ("error, there is no page [[menuPageSlug]] on menu.livecode.world to clone")
@@ -202,7 +202,7 @@ command help_SetHkeyInfo hKey, @wikiDomain, @pageSlug, @pageTitle
          break
       default
          -- not a special handler so add to global library
-         put platform_WikiDomain ("handler") into wikiDomain
+         put platform_LivecodeDomain ("handler") into wikiDomain
          put help_ConstructHandlerTitle (hKey) into pageTitle
          put fedwiki_ConstructSlug (pageTitle) into pageSlug
    end switch
@@ -213,10 +213,10 @@ end help_SetHkeyInfo
 -
 private function _ForkDomains subNameList
    put "fedwiki.org" into forkDomains
-   put comma & platform_WikiDomain() after forkDomains
+   put comma & platform_LivecodeDomain() after forkDomains
    --
    repeat for each item subName in subNameList
-      put comma & platform_WikiDomain (subName) after forkDomains
+      put comma & platform_LivecodeDomain (subName) after forkDomains
    end repeat
    return forkDomains
 end _ForkDomains

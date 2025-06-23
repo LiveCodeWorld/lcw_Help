@@ -30,7 +30,7 @@ function help_CreateMenuPageArray gMenuTitle, mController, pHow
    put menu_StripGlobal (gMenuTitle) into pageTitle
    
    # Fetch template
-   put platform_WikiDomain ("menu") into wikiDomain
+   put platform_LivecodeDomain ("menu") into wikiDomain
    put pageArray_Fetch (wikiDomain, "menu-template") into pageArray
    
    # Add forks, rename and tidy
@@ -103,13 +103,13 @@ function help_FetchMenuPageArray gMenuTitle, mController, pHow
 end help_FetchMenuPageArray
 
 function help_FetchMenuTemplate gMenuTitle, mController
-   put platform_WikiDomain ("menu") into wikiDomain
+   put platform_LivecodeDomain ("menu") into wikiDomain
    put help_ConstructMenuPageTitle (gMenuTitle) into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    --
    put pageArray_Fetch (wikiDomain, pageSlug) into pageArray
    if pageArray is empty then
-      put platform_WikiDomain ("menu") into wikiDomain
+      put platform_LivecodeDomain ("menu") into wikiDomain
       return merge ("Error, there is no page '[[pageTitle]]' on [[wikiDomain]] to clone!")
    end if
    return pageArray
@@ -230,7 +230,7 @@ command help_UpdateMenu gMenuTitle, pHow, pMenuController
    put menu_StripGlobal (gMenuTitle) into menuPageTitle
    put fedwiki_ConstructSlug (menuPageTitle) into menuPageSlug
    --
-   put platform_WikiDomain ("menu") into wikiDomain
+   put platform_LivecodeDomain ("menu") into wikiDomain
    put pageArray_Fetch (wikiDomain, menuPageSlug) into pageArray
    if pageArray is empty then return empty
    --
@@ -244,7 +244,7 @@ end help_UpdateMenu
 
 function help_FetchMenuHelpArray gMenuTitle
    -- fetch wiki-page in "menu.livecode.world"
-   put platform_WikiDomain ("menu") into wikiDomain
+   put platform_LivecodeDomain ("menu") into wikiDomain
    --
    put menu_StripGlobal (gMenuTitle) into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
@@ -376,7 +376,7 @@ function help_ConstructHandlerStory mHandlers, pHandlerObject
             put fedwiki_ConstructSlug (hName) into pageSlug
             put menu_CommandToText (hName) into mText
             --
-            put platform_WikiDomain ("handler") into wikiDomain
+            put platform_LivecodeDomain ("handler") into wikiDomain
             pageArray_AddReference pageArray, pageSlug, wikiDomain, mText, hName
             break
          case pHow is "reference"
@@ -415,7 +415,7 @@ function help_MenuWikiDomain pageTitle
       put word 1 to -1 of item itemNum of pageTitle into dBit
       put tolower (dBit) & "." after firstBit
    end repeat
-   put platform_WikiDomain ("menu") into wikiDomain
+   put platform_LivecodeDomain ("menu") into wikiDomain
    put firstBit & wikiDomain into menuSubDomain
    return menuSubDomain
 end help_MenuWikiDomain
@@ -425,7 +425,7 @@ end help_MenuWikiDomain
 -
 function help_ConstructHkeyURL hKey, pCheckURL
    put help_ConstructHandlerSlug (hKey) into pageSlug
-   put platform_WikiDomain ("handler") into wikiDomain
+   put platform_LivecodeDomain ("handler") into wikiDomain
    if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
    --
    put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL

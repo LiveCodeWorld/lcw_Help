@@ -36,7 +36,7 @@ end help_FetchHandlerPageArray
 command help_StoreHandlerPageArray hName, pageArray
    put fedwiki_ConstructSlug (hName) into pageSlug
    --
-   put "handler." & platform_WikiDomain() into handlerDomain
+   put "handler." & platform_LivecodeDomain() into handlerDomain
    pageArray_Set handlerDomain, pageSlug, pageArray
    put the result into shellResult
    return shellResult
