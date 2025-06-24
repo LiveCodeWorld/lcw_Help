@@ -119,13 +119,16 @@ on menu_DraftHandlerHelp hKey
    draft_HandlerHelp hKey
 end menu_DraftHandlerHelp
 
--- on menu_ModuleHandlerHelp hKey
-   -- draft_HandlerHelp hKey
-   put help_FromHkey (hKey) into pageArray
+on menu_GraphHandler hKey
+   put walk_ConstructHkeyArray (hKey) into hkeyArray
+   hKey_SetArray hkey, hkeyArray
    --
-   draft_WikiPage "handler.livecode.world", pageArray
-end menu_ModuleHandlerHelp
-
+   -- graph_HkeyArray hKey, hkeyArray
+   -- put hkey_ArrayFile (hKey) into hkeyArrayFile
+   
+   display_HKeyArray hKey, hkeyArray, hKey
+end menu_GraphHandler
+  
 on menu_HandlerHelp hKey
    launch_HkeyHelp hKey
    if the result is empty then
