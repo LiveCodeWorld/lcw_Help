@@ -5,7 +5,7 @@ copyright: David Bovill
 license: GPLv3
 name: model_HandlerHelp
 type: model
-version: 0.1
+version: 0.2
 
 
 --> Help | Handler | Model

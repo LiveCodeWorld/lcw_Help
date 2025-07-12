@@ -5,7 +5,7 @@ copyright: David Bovill
 license: GPLv3
 name: lib_MenuItemHelp
 type: library
-version: 0.2
+version: 0.3
 
 /*
 This library is for creating help for menu-items.
@@ -56,7 +56,7 @@ function help_ConstructMenuItemUrl hKey, pCheckURL
    --
    put menu_CommandToText (hName) into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   put fedwiki_ConstructUrlFromSlug (menuSubDomain, pageSlug) into helpURL
+   put fedwiki_UrlFromSlug (menuSubDomain, pageSlug) into helpURL
    --
    put fedwiki_PageExists (menuSubDomain, pageSlug) into pageExists
    if pCheckURL is true and pageExists is false then return empty
@@ -148,7 +148,7 @@ command help_CreateMenuWikiDomain hKey
    put platform_LivecodeDomain ("menu") into wikiDomain
    put pageArray_Fetch (wikiDomain, menuPageSlug) into menuPageArray
    if menuPageArray is empty then
-      return merge ("error, there is no page [[menuPageSlug]] on menu.livecode.world to clone")
+      return merge ("error, there is no page [[menuPageSlug]] on menu.livecode.wiki to clone")
    end if
    --
    put help_ConstructMenuStory (gMenuTitle, "reference", mController) into storyArray
@@ -195,7 +195,7 @@ command help_SetHkeyInfo hKey, @wikiDomain, @pageSlug, @pageTitle
          _SetMenuItemHelpInfo hKey, gMenuTitle, pageTitle, wikiDomain, pageSlug
          break
       case hkey_IsTransportHandler (hKey)
-         put "transport.fedwiki.org" into wikiDomain
+         put "transport.fedwiki.club" into wikiDomain
          hkey_Deconstruct hKey, hName, hType, hObject, hNum
          put the stack_Name of hObject into stackName
          put help_ConstructTransportTitle (stackName) into pageTitle 
@@ -212,7 +212,7 @@ end help_SetHkeyInfo
 --> Private
 -
 private function _ForkDomains subNameList
-   put "fedwiki.org" into forkDomains
+   put "fedwiki.club" into forkDomains
    put comma & platform_LivecodeDomain() after forkDomains
    --
    repeat for each item subName in subNameList

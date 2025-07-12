@@ -17,17 +17,17 @@ Full help text can be found on the linked wiki for the view.*/
 
 --> Events
 -
-on preOpenControl
+-- on preOpenControl
    put the name of stack "behavior_ViewTiddlyWiki" into bObject
    set the behavior of stack "behavior_View_Handler" to bObject
 end preOpenControl
 
-on resizeControl
+-- on resizeControl
    put the rect of me into viewRect
    LayoutControl viewRect
 end resizeControl
 
-command LayoutControl pRect
+-- command LayoutControl pRect
    lock screen
    if pRect is empty then put the rect of me into pRect
    
@@ -39,5 +39,5 @@ end LayoutControl
 --> Objects
 -
 getprop view_Object
-   return the long id of me
+   return the long id of control 1 of me
 end view_Object

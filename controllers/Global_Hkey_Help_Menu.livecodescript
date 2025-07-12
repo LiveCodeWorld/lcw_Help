@@ -144,15 +144,6 @@ on menu_LaunchGithubUrl hKey
    launch_HkeyGitHub hKey
 end menu_LaunchGithubUrl
 
-on menu_TransporterHelp hKey
-   put transport_HelpURL (hKey, true) into someURL
-   if someURL is empty then
-      transport_CreateHkeyHelp hKey
-      put transport_HelpURL (hKey) into someURL
-   end if
-   launch url someURL
-end menu_TransporterHelp
-
 on menu_UpdateHelpGraph hKey, shortFile
    switch
       case LocalArray ["isTransport"]
@@ -204,6 +195,15 @@ on menu_UpdateMetadata hKey
    end switch
 end menu_UpdateMetadata
 
+on menu_TransporterHelp hKey
+   put transport_HelpURL (hKey, true) into someURL
+   if someURL is empty then
+      transport_CreateHkeyHelp hKey
+      put transport_HelpURL (hKey) into someURL
+   end if
+   launch url someURL
+end menu_TransporterHelp
+
 private on __
 end __
 
@@ -232,6 +232,13 @@ on menu_FetchGraphJson hkey
    --
    --  display_JSON dotJSON, "dotJSON"
 end menu_FetchGraphJson
+
+on menu_FixHkeyFolder hKey
+   put hkey_MetadataFolder (hKey) into hkeyFolder
+   finder_Reveal hkeyFolder
+   --
+   
+end menu_FixHkeyFolder
 
 on submenu_Dev
    return menu_DevTitle ("Global | Hkey | Help | Menu")

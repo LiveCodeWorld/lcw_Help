@@ -16,7 +16,7 @@ As such you need to initiate the lcw_Wiki rpject for these handlers to work.
 --> Working on
 -
 private function _ForkDomainItems
-   put "fedwiki.org" into forkDomains
+   put "fedwiki.club" into forkDomains
    --
    put comma & platform_LivecodeDomain() after forkDomains
    repeat for each item subName in "library,model,menu,handler,project"
@@ -152,7 +152,7 @@ function help_ConstructMenuUrl gMenuTitle, pCheckURL
    if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
    
    # Construct and return page utl
-   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
+   put fedwiki_UrlFromSlug (wikiDomain, pageSlug) into someURL
    return someURL
 end help_ConstructMenuUrl
 
@@ -163,7 +163,7 @@ function help_ConstructURL stackName, scriptType, pCheckURL
    --
    if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
    --
-   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
+   put fedwiki_UrlFromSlug (wikiDomain, pageSlug) into someURL
    return someURL
 end help_ConstructURL
 

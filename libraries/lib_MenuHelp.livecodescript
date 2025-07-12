@@ -243,7 +243,7 @@ command help_UpdateMenu gMenuTitle, pHow, pMenuController
 end help_UpdateMenu
 
 function help_FetchMenuHelpArray gMenuTitle
-   -- fetch wiki-page in "menu.livecode.world"
+   -- fetch wiki-page in "menu.livecode.wiki"
    put platform_LivecodeDomain ("menu") into wikiDomain
    --
    put menu_StripGlobal (gMenuTitle) into pageTitle
@@ -323,7 +323,7 @@ command launch_MenuWikiDomain stackName
    put help_ConstructMenuPageTitle (stackName) into pageTitle
    put help_MenuWikiDomain (pageTitle) into menuSubDomain
    --
-   put fedwiki_ConstructUrlFromSlug (menuSubDomain) into someURL
+   put fedwiki_UrlFromSlug (menuSubDomain) into someURL
    if someURL is empty then return empty
    --
    launch url someURL
@@ -428,7 +428,7 @@ function help_ConstructHkeyURL hKey, pCheckURL
    put platform_LivecodeDomain ("handler") into wikiDomain
    if pCheckURL is true and fedwiki_PageExists (wikiDomain, pageSlug) is false then return empty
    --
-   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
+   put fedwiki_UrlFromSlug (wikiDomain, pageSlug) into someURL
    return someURL
 end help_ConstructHkeyURL
 

@@ -20,7 +20,7 @@ function transport_ForkDomains
    repeat for each item subName in "transport,handler,library,model"
       put subName & "." & LcwDomain & comma after forkDomains
    end repeat
-   put ",fedwiki.org" after forkDomains
+   put ",fedwiki.club" after forkDomains
    return forkDomains
 end transport_ForkDomains
 
@@ -167,7 +167,7 @@ function transport_HelpURL hKey, pCheckURL
          return empty
       end if
    end if
-   put fedwiki_ConstructUrlFromSlug (wikiDomain, pageSlug) into someURL
+   put fedwiki_UrlFromSlug (wikiDomain, pageSlug) into someURL
    return someURL
 end transport_HelpURL
 
