@@ -61,7 +61,7 @@ command help_CreateTransportPage tObject, pageTitle, pScriptHelp
    put "# Routes" & CR&CR before someMarkdown
    
    # Replace "Routes section
-   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
+   put itemArray_Construct ("markdown", empty, someMarkdown) into storyArray [1]
    pageArray_ReplaceSectionBody pageArray, "Routes", storyArray
    
    # Store 

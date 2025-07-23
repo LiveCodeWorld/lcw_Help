@@ -16,31 +16,74 @@ This new library is designed for rapid creation of {{wiki-help}} pages.
 constant LcwDomain = "livecode.wiki"
 
 
---> Working on
+--> Display
 -
-private command _AddkeyWords @curlyData, sObject, scriptType
-   switch scriptType
-      case "view"
-      case "module"
-         put the behavior_Objects of sObject into bObjects
-         repeat for each line bObject in bObjects
-            put the script_HandlerNames [true] of bObject & CR after handlerNames
-         end repeat
-         delete char -1 of handlerNames
-         break
-      default
-         put the script_HandlerNames [true] of sObject into handlerNames
-   end switch
+command launch_ObjectHelp tObject, pDisplayObject
+   put the scriptHelp_Url [true] of tObject into helpURL
+   if helpURL is empty then
+      put the name of tObject into oName
+      if exists (pDisplayObject) is false then
+         put rev_ScriptEditorStack () into pDisplayObject
+      end if
+      lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", pDisplayObject, oName
+      
+      ask_PushGithub tObject
+      help_CreateFromObject tObject
+      put the scriptHelp_Url [true] of tObject into helpURL
+   end if
    --
-   put camelcase_BulletList (handlerNames) into keywordList
-   -- put markdown_LinkedBullets (handlerNames) into keywordList
-   curly_SetAll curlyData, "keywordList", keywordList
-end _AddkeyWords
+   launch url helpURL
+   return helpURL
+end launch_ObjectHelp
 
+command help_SetPageGraph sObject, dotText, pGraphStyle
+   if pGraphStyle is not empty then dot_AddLayout dotText, pGraphStyle
+   --
+   put the scriptHelp_PageArray of sObject into pArray
+   pageArray_ReplaceGraph pArray, dotText
+   set the scriptHelp_PageArray of sObject to pArray
+   return pArray
+end help_SetPageGraph
+
+command help_SetPageHandlerSection sObject, hMarkdown
+   put the scriptHelp_PageArray of sObject into pArray
+   pageArray_ReplaceSectionMarkdown pArray, "Handlers", hMarkdown
+   set the scriptHelp_PageArray of sObject to pArray
+   return pArray
+end help_SetPageHandlerSection
 
 
 --> Props
 -
+getprop help_PageArray [pOverlayName]
+   -- construct
+   put the long id of the target into sObject
+   
+   # CurlyData
+   put the object_CurlyData [pOverlayName] of sObject into curlyData
+   put curlyData ["title"] into pageTitle
+   put curlyData ["scriptType"] into scriptType
+   put curlyData ["all"]["scriptHelp"] into scriptHelp
+   if scriptHelp is empty then
+      put "Help..." into scriptHelp
+   end if
+   put curlyData ["stackName"] into stackName
+   
+   # PageArray
+   -- put curlyData ["all"]["scriptHelp"] into scriptHelp
+   put empty into scriptHelp
+   put help_ForkDomains (scriptType) into forkDomains
+   put wikiPage_Help (scriptType, curlyData, scriptHelp, forkDomains, pOverlayName) into pageArray
+   
+   # Check
+   if pageArray_Check (pageArray) is false then
+      put help_ConstructDomain (scriptType) into helpDomain
+      put merge ("Error, could not fetch template for '[[scriptType]]' at '[[helpDomain]]'") into someMarkdown
+      put pageArray_Construct ("Error", someMarkdown) into pageArray
+   end if
+   return pageArray
+end help_PageArray
+
 getprop curly_Data [pHkey]
    put the long id of the target into sObject
    --
@@ -58,7 +101,6 @@ getprop object_CurlyData [pGraphStyle]
    put the long id of the target into sObject
    
    # Script Metadata
-   put the long id of the target into sObject
    put the script_MetaData of sObject into sMetaData   
    put sMetaData ["type"] into scriptType
    
@@ -75,14 +117,17 @@ getprop object_CurlyData [pGraphStyle]
    
    # YAML
    _ProcessScriptMetadata sMetaData, scriptHelp, scriptYaml
-   curly_SetAll curlyData, "scriptYaml", scriptYaml
-   curly_SetAll curlyData, "scriptHelp", scriptHelp
    
    # Metadata and Where Yaml
-   put the script_WhereData of sObject into whereData
-   put whereData into whereYaml
+   put the script_WhereData of sObject into whereYaml
+   
+   split scriptYaml with CR and ": "
+   union whereYaml with scriptYaml
    combine whereYaml with CR and ": "
+   
    curly_SetAll curlyData, "whereYaml", whereYaml
+   -- curly_SetAll curlyData, "scriptYaml", scriptYaml
+   curly_SetAll curlyData, "scriptHelp", scriptHelp
    
    # Object
    put the stack_Name of sObject into stackName
@@ -148,7 +193,12 @@ getprop object_CurlyData [pGraphStyle]
    
    # External Calls
    put the script_ExternalCalls of sObject into externalCalls
-   put fedwiki_HkeyMarkdownIndex (externalCalls) into externalBullets
+   if externalCalls is empty then
+      put "There are no external calls. This is a standlaone script." into externalBullets
+   else
+      get fedwiki_HkeyMarkdownIndex (externalCalls)
+      put "This library calls the following external handlers:" & CR & it into externalBullets
+   end if
    curly_SetAll curlyData, "externalCalls", externalBullets
    
    # Github
@@ -162,6 +212,110 @@ getprop object_CurlyData [pGraphStyle]
    return curlyData
 end object_CurlyData
 
+
+--> Working on
+-
+function wikiPage_Help subDomain, curlyData, pScriptHelp, pForkDomains
+   -- subDomain = scriptType
+   put curlyData ["title"] into pageTitle
+   put help_ConstructDomain (subDomain) into wikiDomain
+   
+   # Fetch Template
+   put wikiTemplate_GetHelp (subDomain) into pageArray
+   if pageArray ["plugin"] = "Error" then return pageArray -- could use "title"
+   if pageArray_Check (pageArray) is false then return pageArray_Construct  ("Error", "Some error with wikiTemplate_GetHelp()", "Error")
+   
+   # Rename
+   help_RenameTemplate pageArray, pageTitle, wikiDomain
+   
+   # Curly Merge
+   curly_MergePageArray pageArray, curlyData
+   if pScriptHelp is not empty then
+      put pageArray ["story"][1]["text"] into oText
+      put pScriptHelp & CR&CR & oText into newFirstPara
+      put newFirstPara into pageArray ["story"][1]["text"]
+   end if
+   
+   # Add Fork
+   pageArray_StripJournal pageArray
+   put wikiPage_ForkDomains (wikiDomain, pForkDomains) into forkDomains
+   pageArray_AddFork pageArray, forkDomains
+   --
+   return pageArray
+end wikiPage_Help
+
+
+--> WikiTemplate
+-
+function wikiTemplate_FetchHelp subDomain, pStripJournal, pPort, pProtocol
+   put help_ConstructDomain (subDomain) into wikiDomain
+   put help_ConstructSlug (subDomain) into pageSlug
+   --
+   put pageArray_Fetch(wikiDomain, pageSlug, pPort, pProtocol) into pageArray
+   if pageArray is not an array then
+      put "[[" & fedwiki_ConstructTitle (pageSlug) & "]]" into slugLink
+      put merge ("Ensure there is a page [[slugLink]] of wiki '[[wikiDomain]]...") into mdText
+      put pageArray_Construct  ("Error", mdText, "error") into pageArray
+   end if
+   if pStripJournal is true then
+      pageArray_StripJournal templateArray
+   end if
+   return pageArray
+end wikiTemplate_FetchHelp
+
+function wikiTemplate_GetHelp subDomain, pStripJournal
+   put help_ConstructDomain (subDomain) into wikiDomain
+   put help_ConstructSlug (subDomain) into pageSlug
+   --
+   put pageArray_Get (wikiDomain, pageSlug) into pageArray
+   if pageArray is not an array then
+      put "[[" & fedwiki_ConstructTitle (pageSlug) & "]]" into slugLink
+      put merge ("Ensure there is a page [[slugLink]] of wiki '[[wikiDomain]]...") into mdText
+      put pageArray_Construct  ("Error", mdText, "error") into pageArray
+   end if
+   if pStripJournal is true then
+      pageArray_StripJournal templateArray
+   end if
+   return pageArray
+end wikiTemplate_GetHelp
+
+
+--> Help | Store
+-
+function help_GetFile wikiDomain, pSlug
+   put wikiFile_Construct (wikiDomain, pSlug) into wikiFile
+   if there is a file wikiFile then
+      return wikiFile
+   else
+      return empty
+   end if
+end help_GetFile
+
+function help_GetPageArray pageTitle, scriptType
+   put help_ConstructDomain (scriptType) into helpDomain
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   put pageArray_Get (helpDomain, pageSlug) into pageArray
+   return pageArray
+end help_GetPageArray
+
+command help_StorePageArray pageArray, scriptType
+   # Check pageArray
+   if pageArray_Check (pageArray) is false then return "Error, not storing. Faulty pageArray"
+   
+   # Work out domain and slug
+   put help_ConstructDomain (scriptType) into helpDomain
+   put pageArray ["title"] into pageTitle
+   put fedwiki_ConstructSlug (pageTitle) into pageSlug
+   
+   # Store
+   pageArray_Set wikiDomain, pageSlug, pageArray, true
+   put the result into wikiFile
+   return wikiFile
+end help_StorePageArray
+
+
+--> Help | Create | Object
+-
 function help_ForkDomains scriptType  
    switch scriptType
       case "Model"
@@ -182,115 +336,6 @@ function help_ForkDomains scriptType
    return forkDomains
 end help_ForkDomains
 
-getprop help_PageArray [pOverlayName]
-   put the long id of the target into sObject
-   
-   # CurlyData
-   put the object_CurlyData [pOverlayName] of sObject into curlyData
-   put curlyData ["title"] into pageTitle
-   put curlyData ["scriptType"] into scriptType
-   put curlyData ["all"]["scriptHelp"] into scriptHelp
-   put curlyData ["stackName"] into stackName
-   
-   # PageArray
-   put help_ForkDomains (scriptType) into forkDomains
-   put wikiPage_Help (scriptType, curlyData, scriptHelp, forkDomains, pOverlayName) into pageArray
-   
-   # Check
-   if pageArray_Check (pageArray) is false then
-      put help_ConstructDomain (scriptType) into helpDomain
-      put merge ("Error, could not fetch template for '[[scriptType]]' at '[[helpDomain]]'") into someMarkdown
-      put pageArray_Construct ("Error", someMarkdown) into pageArray
-   end if
-   
-   return pageArray
-end help_PageArray
-
-
---> Display
--
-command launch_ObjectHelp tObject, pDisplayObject
-   put the help_Url [true] of tObject into helpURL
-   if helpURL is empty then
-      put the name of tObject into oName
-      if exists (pDisplayObject) is false then
-         put rev_ScriptEditorStack () into pDisplayObject
-      end if
-      lcw_Answer "Are you sure you wish to create the wiki help page for the script of [[oName]]? This will overwrite any existing page.", pDisplayObject, oName
-      
-      ask_PushGithub tObject
-      help_CreateFromObject tObject
-      put the help_Url [true] of tObject into helpURL
-   end if
-   --
-   launch url helpURL
-   return helpURL
-end launch_ObjectHelp
-
-
---> Draft
--
-command draft_ModuleHelp moduleName, pOverlayName
-   put view_GetTemplateObject (moduleName) into mObject
-   if exists (mObject) is false then
-      breakpoint
-      return "Error, cannot find module:" && moduleName
-   end if
-   --
-   put the help_PageArray [pOverlayName] of mObject into helpPageArray
-   --
-   -- put the help_Domain of mObject into wikiDomain
-   put "module." & LcwDomain into wikiDomain
-   draft_PageArray wikiDomain, helpPageArray
-   put the result into wikiBrowser
-   return wikiBrowser
-end draft_ModuleHelp
-
-command draft_ProjectHelp sObject, pOverlayName
-   put the help_PageArray [pOverlayName] of sObject into helpPageArray
-   -- 
-   put the help_Domain of sObject into wikiDomain
-   draft_PageArray wikiDomain, helpPageArray
-   put the result into wikiBrowser
-   return wikiBrowser
-end draft_ProjectHelp
-
-command draft_ScriptHelp sObject, pOverlayName
-   put the help_PageArray [pOverlayName] of sObject into helpPageArray
-   put the help_Domain of sObject into wikiDomain
-   draft_PageArray wikiDomain, helpPageArray
-   put the result into wikiBrowser
-   return wikiBrowser
-end draft_ScriptHelp
-
-command draft_PageArray wikiDomain, pageArray
-   put pageArray ["title"] into pageTitle
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   
-   # Find Wiki Browser
-   put display_ListWikiBrowsers (wikiDomain) into wikiBrowser
-   if exists (wikiBrowser) is true then
-      object_GoTo wikiBrowser
-   else
-      display_Wiki wikiDomain
-      put the result into wikiBrowser
-      wait 40 ticks
-   end if
-   
-   # Display Ghost
-   set the ghost_PageArray of wikiBrowser to pageArray
-   
-   # Display Page (if exists)
-   put wikiFile_Construct (wikiDomain, pageSlug) into wikiFile
-   if there is a file wikiFile then
-      set the page_Title [wikiDomain] of wikiBrowser to pageTitle
-   end if
-   return wikiBrowser
-end draft_PageArray
-
-
---> Help | Create | Object
--
 command help_CreateFromObject sObject
    put the script_Type of sObject into scriptType
    switch scriptType
@@ -339,24 +384,28 @@ command help_Create pageTitle, scriptType, curlyData, pScriptHelp
    return pageArray
 end help_Create
 
-command help_StorePageArray pageArray, scriptType
-   # Check pageArray
-   if pageArray_Check (pageArray) is false then return "Error, not storing. Faulty pageArray"
-   
-   # Work out domain and slug
-   put help_ConstructDomain (scriptType) into helpDomain
-   put pageArray ["title"] into pageTitle
-   put fedwiki_ConstructSlug (pageTitle) into pageSlug
-   
-   # Store
-   pageArray_Set wikiDomain, pageSlug, pageArray, true
-   put the result into wikiFile
-   return wikiFile
-end help_StorePageArray
-
 
 --> Private
 -
+private command _AddkeyWords @curlyData, sObject, scriptType
+   switch scriptType
+      case "view"
+      case "module"
+         put the behavior_Objects of sObject into bObjects
+         repeat for each line bObject in bObjects
+            put the script_HandlerNames [true] of bObject & CR after handlerNames
+         end repeat
+         delete char -1 of handlerNames
+         break
+      default
+         put the script_HandlerNames [true] of sObject into handlerNames
+   end switch
+   --
+   put camelcase_BulletList (handlerNames) into keywordList
+   -- put markdown_LinkedBullets (handlerNames) into keywordList
+   curly_SetAll curlyData, "keywordList", keywordList
+end _AddkeyWords
+
 private command _ProcessScriptMetadata sMetaData, @scriptHelp, @scriptYaml
    put sMetaData ["script_Help"] into scriptHelp
    delete variable sMetaData ["script_Help"]

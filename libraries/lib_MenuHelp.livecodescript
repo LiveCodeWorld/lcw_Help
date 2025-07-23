@@ -82,16 +82,16 @@ function help_ConstructMenuStory gMenuTitle, pHow, pMenuController
          put pageArray ["story"] into storyArray
          break
       default
-         put the menu_PermalinkMarkdown of pMenuController into sMarkdown
-         get storyArray_ConstructItem (sMarkdown, "markdown")
+         put the menuItem_PermaBullets of pMenuController into sMarkdown
+         get itemArray_Construct ("markdown", empty, sMarkdown)
          put it into storyArray[1]
    end switch
    return storyArray
 end help_ConstructMenuStory
 
 function help_ConstructHandlerStoryMD gMenuTitle, pMenuController
-   put help_ConstructMenuMarkdown (gMenuTitle, pMenuController) into someMarkdown
-   put storyArray_ConstructItem (someMarkdown, "markdown") into storyArray [1]
+   put help_ConstructMenuMarkdown (gMenuTitle, pMenuController) into sMarkdown
+   put itemArray_Construct ("markdown", empty, sMarkdown) into storyArray [1]
    return storyArray
 end help_ConstructHandlerStoryMD
 
@@ -114,56 +114,6 @@ function help_FetchMenuTemplate gMenuTitle, mController
    end if
    return pageArray
 end help_FetchMenuTemplate
-
-
---> Props
--
-getprop help_MenuPageArray
-   put the long id of the target into mController
-   put the menu_GlobalTitle of mController into gMenuTitle
-   put help_FetchMenuPageArray (gMenuTitle, mController) into pageArray
-   return pageArray
-end help_MenuPageArray
-
-getprop menu_PermalinkMarkdown [pFast]
-   -- pFast can be true, false, or gMenutitle
-   put the long id of the target into mController
-   put the menu_Handlers [pFast] of mController into hNames
-   
-   # Construct markdown
-   _SetCommitStuff mController, sFile, checkoutFolder, relativePath, commitHash, repoBit
-   repeat for each line hName in hNames
-      set the cursor to busy
-      switch
-         case hName = "_"
-            put "- -" & CR after someMarkdown
-            break
-         default
-            put menu_CommandToText (hName) into mText
-            put _Markdownline (hName, mController, commitHash, repoBit, relativePath, mText) & CR after someMarkdown
-      end switch   
-   end repeat
-   delete char -1 of someMarkdown
-   return someMarkdown
-end menu_PermalinkMarkdown
-
-getprop handler_PermaMarkdown [pNotPrivate]
-   put the long id of the target into hObject
-   
-   # Collect handler names
-   put the script_HandlerNames [pNotPrivate] of hObject into hNames
-   put help_ConstructMarkdown (hNames, hObject)into someMarkdown
-   return someMarkdown
-end handler_PermaMarkdown
-
-getprop transport_PermaMarkdown [pNotPrivate]
-   put the long id of the target into hObject
-   
-   # Collect handler names
-   put the script_HandlerNames [pNotPrivate] of hObject into hNames
-   put help_ConstructMarkdown (hNames, hObject)into someMarkdown
-   return someMarkdown
-end transport_PermaMarkdown
 
 
 --> Help | Menu | Create
@@ -331,40 +281,8 @@ command launch_MenuWikiDomain stackName
 end launch_MenuWikiDomain
 
 
---> Help | Construct
+--> Help
 -
-function help_ConstructMarkdown hNames, hObject
-   # Construct markdown
-   _SetCommitStuff hObject, sFile, checkoutFolder, relativePath, commitHash, repoBit
-   repeat for each line hName in hNames
-      set the cursor to busy
-      switch
-         case hName = "_"
-            put "- -" & CR after someMarkdown
-            break
-         default
-            put _Markdownline (hName, hObject, commitHash, repoBit, relativePath) & CR after someMarkdown
-      end switch   
-   end repeat
-   delete char -1 of someMarkdown
-   return someMarkdown
-end help_ConstructMarkdown
-
-function help_ConstructMenuMarkdown gMenuTitle, pMenuController
-   local pageArray
-   if pMenuController is empty then put menu_GetGlobalController (gMenuTitle) into pMenuController
-   if exists (pMenuController) is false then return empty
-   
-   # Update git and push if needed
-   ask_PushGithub pMenuController
-   
-   # Construct menu-markdown  
-   put the menu_PermalinkMarkdown [gMenuTitle] of pMenuController into someMarkdown
-   put "# Menu" & CR&CR before someMarkdown
-   --
-   return someMarkdown
-end help_ConstructMenuMarkdown
-
 function help_ConstructHandlerStory mHandlers, pHandlerObject
    local pageArray
    repeat for each line hName in mHandlers 
@@ -446,27 +364,6 @@ end help_CheckMenu
 
 --> Private
 -
-private command _SetCommitStuff hObject, @sFile, @checkoutFolder, @relativePath, @commitHash, @repoBit
-   put the filename of hObject into sFile
-   put git_GetCommitFileHash (sFile, 1) into commitHash
-   git_SetRelative sFile, relativePath, checkoutFolder
-   --
-   put "LiveCodeWorld" into repoBit
-   set the itemdelimiter to slash
-   put item -1 of checkoutFolder into item 2 of repoBit
-   set the itemdelimiter to comma
-end _SetCommitStuff
-
-private function _Markdownline hName, hObject, commitHash, repoBit, relativePath, pText
-   if pText is empty then put hName into pText
-   --
-   put hkey_Construct (hName, "M", hObject) into hKey
-   hkeyLine_Offsets hObject, hKey, sLineNum, eLineNum
-   put github_ConstructPermalink (commitHash, repoBit, relativePath, sLineNum, eLineNum) into webPermalink
-   get "-" && "- [" & webPermalink && pText & "]"
-   return it
-end _Markdownline
-
 private function fedwiki_ConstructSlug pageTitle
    -- it is very annoying that "_" is not an allowed character
    replace space with "-" in pageTitle

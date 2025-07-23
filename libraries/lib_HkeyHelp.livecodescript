@@ -29,6 +29,19 @@ end project_FolderTokind
 
 --> Working on
 -
+function help_HandlerTitle hKey
+   hkey_Deconstruct hKey, hName, hType, hObject, hNum
+   switch
+      case hType contains "G"
+      case hType contains "S"
+         return hName -- & "[]" -- ugly
+      case hType contains "F"
+         return hName & "()"
+      default
+         return hName
+   end switch
+end help_HandlerTitle
+
 function camelcase_BulletList hNameList
    local kWordArray
    replace comma with CR in hNameList
@@ -153,7 +166,7 @@ getprop script_WhereData
    if moduleName is not empty then
       put moduleName into whereData ["Module"]
    end if
-   put sKind into whereData ["Kind"]
+   put sKind into whereData ["Type"]
    put shortFile into whereData ["File"]
    put relPath into whereData ["Path"]
    --
@@ -280,7 +293,7 @@ function help_HkeyCurlyData hKey
    curly_SetAll curlyData, "whereYaml", whereYaml
    
    # Kind and handler line
-   put whereData ["Kind"] into pluralType
+   put whereData ["Type"] into pluralType
    put script_SingularType (pluralType) into libType
    curly_SetAll curlyData, "libType", libType
    curly_SetAll curlyData, "hLine", hLine
@@ -337,8 +350,8 @@ command help_CreateFromHkey hKey, pScriptHelp
 end help_CreateFromHkey
 
 function help_FromHkey hKey, pScriptHelp
-   put help_ConstructHandlerTitle (hKey) into pageTitle
    put help_HkeyCurlyData (hKey) into curlyData
+   put help_HandlerTitle (hKey) into pageTitle
    put pageTitle into curlyData ["title"]
    --
    put help_ForkDomains () into forkDomains
@@ -358,16 +371,10 @@ function help_GetHkeyTags hKey
 end help_GetHkeyTags
 
 function help_ConstructHandlerSlug hKey
-   put help_ConstructHandlerTitle (hKey) into pageTitle
+   put help_HandlerTitle (hKey) into pageTitle
    put fedwiki_ConstructSlug (pageTitle) into pageSlug
    return pageSlug
 end help_ConstructHandlerSlug
-
-function help_ConstructHandlerTitle hKey
-   -- here we can experiment with different types of names
-   hkey_Deconstruct hKey, hName, hType, hObject, hNum
-   return hName
-end help_ConstructHandlerTitle
 
 
 --> Help | pageArray | Set

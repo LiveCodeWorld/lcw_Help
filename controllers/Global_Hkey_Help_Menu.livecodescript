@@ -88,27 +88,14 @@ getprop updateHelpGraph_Params [hKey]
    return shortFiles
 end updateHelpGraph_Params
 
-private command _RecreateHelp hKey
-   hkeyLine_Deconstruct hKey, hName, hType, hObject
-   -- put LocalArray ["tObject"] into tObject
-   put rev_ScriptEditorStack () into editorStack
-   --
-   lcw_Answer "Are you sure you wish to create the wiki help page for handler '[[hName]]'? This will overwrite any existing page.", editorStack, hName
-   --
-   -- ask_PushGithub hObject
-   --
-   help_CreateFromHkey hKey
-   put the result into pageArray
-   if pageArray is not an array then
-      breakpoint
-   else
-      launch_HkeyHelp hKey
-   end if
-end _RecreateHelp
-
 
 --> Global | Hkey | Help | Menu
 -
+on menu_CreateHandlerHelp hKey
+   hkeyHelp_Create hKey, true
+   put the result into handlerURL
+end menu_CreateHandlerHelp
+
 on menu_CreateTiddler hKey
    put draft_HkeyPageArray (hKey) into pageArray
    --
@@ -131,9 +118,25 @@ end menu_GraphHandler
   
 on menu_HandlerHelp hKey
    launch_HkeyHelp hKey
-   if the result is empty then
+   if the result is not empty then
       breakpoint
-      _RecreateHelp hKey
+   end if
+   
+   # Recreate
+   hkeyLine_Deconstruct hKey, hName, hType, hObject
+   -- put LocalArray ["tObject"] into tObject
+   put rev_ScriptEditorStack () into editorStack
+   --
+   lcw_Answer "Are you sure you wish to create the wiki help page for handler '[[hName]]'? This will overwrite any existing page.", editorStack, hName
+   --
+   -- ask_PushGithub hObject
+   --
+   help_CreateFromHkey hKey
+   put the result into pageArray
+   if pageArray is not an array then
+      breakpoint
+   else
+      launch_HkeyHelp hKey
    end if
 end menu_HandlerHelp
 

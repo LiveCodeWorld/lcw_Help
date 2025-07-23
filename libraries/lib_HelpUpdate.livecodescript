@@ -75,7 +75,7 @@ private function _ObjectStoryArray sObject
    put the github_Permalink of sObject into permaLink
    put the script_HandlerNames [true] of sObject into hNames
    put help_CodeSectionMarkdown (hNames, permaLink) into sMarkdown
-   get storyArray_ConstructItem (sMarkdown, "markdown")
+   get itemArray_Construct ("markdown", empty, sMarkdown)
    put it into storyArray[1]
    return storyArray
 end _ObjectStoryArray
